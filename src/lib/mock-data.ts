@@ -26,6 +26,7 @@ export interface Collection {
     color: string; // accent color for card border
     isFavorite: boolean;
     itemCount: number;
+    createdAt: string;
 }
 
 export interface Item {
@@ -78,6 +79,7 @@ export const mockCollections: Collection[] = [
         color: "#3b82f6",
         isFavorite: true,
         itemCount: 12,
+        createdAt: "2025-12-02",
     },
     {
         id: "collection-python-snippets",
@@ -86,6 +88,7 @@ export const mockCollections: Collection[] = [
         color: "#3b82f6",
         isFavorite: false,
         itemCount: 8,
+        createdAt: "2026-01-14",
     },
     {
         id: "collection-context-files",
@@ -94,6 +97,7 @@ export const mockCollections: Collection[] = [
         color: "#6b7280",
         isFavorite: true,
         itemCount: 5,
+        createdAt: "2025-11-20",
     },
     {
         id: "collection-interview-prep",
@@ -102,6 +106,7 @@ export const mockCollections: Collection[] = [
         color: "#fde047",
         isFavorite: false,
         itemCount: 24,
+        createdAt: "2026-01-16",
     },
     {
         id: "collection-git-commands",
@@ -110,6 +115,7 @@ export const mockCollections: Collection[] = [
         color: "#f97316",
         isFavorite: true,
         itemCount: 15,
+        createdAt: "2025-12-28",
     },
     {
         id: "collection-ai-prompts",
@@ -118,6 +124,7 @@ export const mockCollections: Collection[] = [
         color: "#8b5cf6",
         isFavorite: false,
         itemCount: 18,
+        createdAt: "2026-01-10",
     },
 ];
 

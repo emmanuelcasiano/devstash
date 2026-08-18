@@ -1,12 +1,26 @@
-import { FolderPlus, Layers, Plus, Search } from "lucide-react";
+"use client";
+
+import { FolderPlus, Layers, PanelLeft, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSidebar } from "@/components/layout/sidebar-provider";
 
 export function TopBar() {
+    const { toggleSidebar } = useSidebar();
+
     return (
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-4">
             <div className="flex items-center gap-2">
+                <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Open sidebar"
+                    onClick={toggleSidebar}
+                    className="lg:hidden"
+                >
+                    <PanelLeft />
+                </Button>
                 <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500">
                     <Layers className="size-4 text-white" />
                 </div>
