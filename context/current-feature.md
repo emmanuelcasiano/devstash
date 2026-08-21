@@ -4,7 +4,7 @@ Seed Data
 
 ## Status
 
-In Progress
+Completed
 
 ## Goals
 
@@ -30,3 +30,4 @@ In Progress
 - **2026-08-19** — Dashboard UI Phase 2 (Completed): collapsible sidebar with Types and Collections (favorites + recent) sections, item type links to `/items/[type]`, sidebar header ("Navigation" label + collapse toggle) and pinned user avatar footer spanning full width, drawer-based sidebar on mobile via Sheet, and a fixed-viewport-height dashboard shell (`h-screen` with internal `main` scroll) so the sidebar always fills the full screen height. Fixed a pre-existing broken `--font-sans` mapping so the app now renders with the intended Geist font. Lint and `npm run build` pass.
 - **2026-08-19** — Dashboard UI Phase 3 (Completed): main dashboard content built out with 4 stats cards (items, collections, favorite items, favorite collections), a recent collections grid (name, favorite star, item count, description, type icons), a pinned items section, and a 10-item recent items list, each item/collection rendered as its own card. Added the shadcn `card` component and expanded `mock-data.ts` with more items and multi-collection assignments so collections show 2-3 distinct types. Lint and `npm run build` pass.
 - **2026-08-22** — Prisma + Neon PostgreSQL Setup (Completed): Prisma 7 wired up with `@prisma/adapter-neon` driver adapter (v7 requires driver adapters and removed `directUrl` from the schema, so `prisma.config.ts` points the CLI at a direct/unpooled `DIRECT_URL` while the app runtime client in `src/lib/prisma.ts` uses the pooled `DATABASE_URL`). Full initial schema added (`User`, `Account`, `Session`, `VerificationToken`, `Item`, `ItemType`, `Collection`, `ItemCollection`, `Tag`) with indexes and cascade deletes per `context/features/database-spec.md`. Ran `prisma migrate dev --name init` and `prisma db seed` against the Neon dev branch (never `db push`); `prisma migrate status` confirms the schema is in sync. Lint and `npm run build` pass. Merged to `main`, branch deleted.
+- **2026-08-22** — Seed Data (Completed): rewrote `prisma/seed.ts` per `context/features/seed-spec.md` — seeds a demo user (`demo@devstash.io`, bcryptjs-hashed password at 12 rounds), the 7 system item types (existing logic preserved), and 5 collections (React Patterns, AI Workflows, DevOps, Terminal Commands, Design Resources) totaling 18 items across snippets, prompts, commands, and links with real URLs. Added `bcryptjs` as a dependency. Seed logic checks for existing rows before creating, so re-running `prisma db seed` doesn't duplicate data — verified by running it twice against the Neon dev branch and confirming row counts stayed the same. Lint and `npm run build` pass.
