@@ -1,25 +1,18 @@
 # Current Feature
 
-Seed Data
+<!-- Feature Name -->
 
 ## Status
 
-Completed
+<!-- Not Started|In Progress|Completed -->
 
 ## Goals
 
-- Overwrite `prisma/seed.ts` to populate the database with sample data for development and demos, per `context/features/seed-spec.md`
-- Seed a demo `User` (demo@devstash.io, password hashed with bcryptjs at 12 rounds, `isPro: false`, `emailVerified` set to the current date)
-- Seed the 7 system `ItemType` rows (unchanged from the current setup)
-- Seed 5 collections owned by the demo user, each with items per the spec: React Patterns (3 snippets), AI Workflows (3 prompts), DevOps (1 snippet, 1 command, 2 links), Terminal Commands (4 commands), Design Resources (4 links)
+<!-- Goals & requirements -->
 
 ## Notes
 
-- Full requirements: `context/features/seed-spec.md`
-- `bcryptjs` isn't installed yet — will need to add it (and `@types/bcryptjs` if not bundled) as a dependency.
-- Links should use real, working URLs per the spec (not placeholders).
-- Re-running the seed script should stay idempotent — check for the demo user/existing rows before creating, same pattern as the current system-item-type seeding.
-- This overwrites the existing `prisma/seed.ts` from the Prisma + Neon Postgres Setup feature; the system item type seeding logic should be preserved/merged in, not dropped.
+<!-- Any extra notes -->
 
 ## History
 
