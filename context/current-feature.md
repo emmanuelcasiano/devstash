@@ -1,34 +1,27 @@
 # Current Feature
 
-Dashboard UI Phase 3
+Prisma + Neon PostgreSQL Setup
 
 ## Status
 
-Completed
+In Progress
 
 ## Goals
 
-Phase 3 of 3 for the dashboard UI layout — build out the main content area to the right of the sidebar. Use `@context/screenshots/dashboard-ui-main.png` as the visual reference and `@src/lib/mock-data.js` for data (import directly for now, until a database is implemented).
-
-Requirements:
-
-- The main area to the right
-- Recent collections
-- Pinned items
-- 10 recent items
-- 4 stats cards at the top for number of items, collections, favorite items, and favorite collections (not shown in the screenshot)
-
-References:
-
-- @context/screenshots/dashboard-ui-main.png
-- @context/project-overview.md
-- @src/lib/mock-data.js
-- @context/features/dashboard-phase-1-spec.md
-- @context/features/dashboard-phase-2-spec.md
+- Set up Prisma ORM (v7) with a Neon PostgreSQL (serverless) database
+- Create the initial schema based on the data models in `context/project-overview.md` (schema will evolve over time)
+- Include NextAuth models: `Account`, `Session`, `VerificationToken`
+- Add appropriate indexes and cascade deletes
 
 ## Notes
 
-<!-- Any extra notes -->
+- Two Neon branches will be used: a development branch (`DATABASE_URL` locally) and a production branch. Always create migrations with `prisma migrate dev`; never use `db push` or push schema changes directly.
+- Prisma 7 has breaking changes vs earlier versions — read the upgrade guide (https://www.prisma.io/docs/orm/more/upgrade-guides/upgrading-versions/upgrading-to-prisma-7) before implementing.
+- Reference the Prisma Postgres quickstart for setup steps: https://www.prisma.io/docs/getting-started/prisma-orm/quickstart/prisma-postgres
+- Full requirements: `context/features/database-spec.md`
+- Scaffolding is done on branch `feature/prisma-neon-setup`: `prisma.config.ts` (Prisma 7 config, driver adapters, no more `directUrl` in schema), `prisma/schema.prisma` (full model set + NextAuth models), `prisma/seed.ts`, `src/lib/prisma.ts` (Neon adapter client singleton), `.env`/`.env.example` with placeholder Neon URLs. `npx prisma generate`, `npm run build`, and `npm run lint` all pass.
+- `.env` now has real Neon dev-branch connection strings (`DATABASE_URL` pooled, `DIRECT_URL` derived by dropping the `-pooler` suffix per Neon's convention). Ran `npx prisma migrate dev --name init` against the Neon dev branch — migration `20260821184403_init` applied successfully — followed by `npx prisma db seed` (7 system item types seeded). `npx prisma migrate status` confirms the database schema is in sync, and `npm run build` passes with the migration present.
+- Remaining before this moves to Completed: commit, merge to `main`, and delete the branch per the standard workflow.
 
 ## History
 
