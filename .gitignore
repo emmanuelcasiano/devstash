@@ -41,6 +41,7 @@ yarn-error.log*
 *.db-journal
 /prisma/dev.db
 /prisma/dev.db*
+/src/generated/prisma
 
 # uploads / generated content
 /uploads/
