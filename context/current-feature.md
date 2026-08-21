@@ -1,26 +1,26 @@
 # Current Feature
 
-Prisma + Neon PostgreSQL Setup
+Seed Data
 
 ## Status
 
-Completed
+In Progress
 
 ## Goals
 
-- Set up Prisma ORM (v7) with a Neon PostgreSQL (serverless) database
-- Create the initial schema based on the data models in `context/project-overview.md` (schema will evolve over time)
-- Include NextAuth models: `Account`, `Session`, `VerificationToken`
-- Add appropriate indexes and cascade deletes
+- Overwrite `prisma/seed.ts` to populate the database with sample data for development and demos, per `context/features/seed-spec.md`
+- Seed a demo `User` (demo@devstash.io, password hashed with bcryptjs at 12 rounds, `isPro: false`, `emailVerified` set to the current date)
+- Seed the 7 system `ItemType` rows (unchanged from the current setup)
+- Seed 5 collections owned by the demo user, each with items per the spec: React Patterns (3 snippets), AI Workflows (3 prompts), DevOps (1 snippet, 1 command, 2 links), Terminal Commands (4 commands), Design Resources (4 links)
 
 ## Notes
 
-- Two Neon branches will be used: a development branch (`DATABASE_URL` locally) and a production branch. Always create migrations with `prisma migrate dev`; never use `db push` or push schema changes directly.
-- Prisma 7 has breaking changes vs earlier versions — read the upgrade guide (https://www.prisma.io/docs/orm/more/upgrade-guides/upgrading-versions/upgrading-to-prisma-7) before implementing.
-- Reference the Prisma Postgres quickstart for setup steps: https://www.prisma.io/docs/getting-started/prisma-orm/quickstart/prisma-postgres
-- Full requirements: `context/features/database-spec.md`
-- Scaffolding is done on branch `feature/prisma-neon-setup`: `prisma.config.ts` (Prisma 7 config, driver adapters, no more `directUrl` in schema), `prisma/schema.prisma` (full model set + NextAuth models), `prisma/seed.ts`, `src/lib/prisma.ts` (Neon adapter client singleton), `.env`/`.env.example` with placeholder Neon URLs. `npx prisma generate`, `npm run build`, and `npm run lint` all pass.
-- `.env` now has real Neon dev-branch connection strings (`DATABASE_URL` pooled, `DIRECT_URL` derived by dropping the `-pooler` suffix per Neon's convention). Ran `npx prisma migrate dev --name init` against the Neon dev branch — migration `20260821184403_init` applied successfully — followed by `npx prisma db seed` (7 system item types seeded). `npx prisma migrate status` confirms the database schema is in sync, and `npm run build` passes with the migration present.
+- Full requirements: `context/features/seed-spec.md`
+- `bcryptjs` isn't installed yet — will need to add it (and `@types/bcryptjs` if not bundled) as a dependency.
+- Links should use real, working URLs per the spec (not placeholders).
+- Re-running the seed script should stay idempotent — check for the demo user/existing rows before creating, same pattern as the current system-item-type seeding.
+- This overwrites the existing `prisma/seed.ts` from the Prisma + Neon Postgres Setup feature; the system item type seeding logic should be preserved/merged in, not dropped.
+
 ## History
 
 <!-- Keep this updated. Earliest to latest -->
