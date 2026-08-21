@@ -2,17 +2,10 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 
 import { renderItemTypeIcon } from "@/components/shared/ItemTypeIcon";
-import { mockItemTypes, mockItems, type Collection } from "@/lib/mock-data";
+import type { CollectionWithStats } from "@/lib/db/collections";
 import { Card, CardContent } from "@/components/ui/card";
 
-export function CollectionCard({ collection }: { collection: Collection }) {
-    const typeIds = new Set(
-        mockItems
-            .filter((item) => item.collectionIds.includes(collection.id))
-            .map((item) => item.itemTypeId)
-    );
-    const types = mockItemTypes.filter((type) => typeIds.has(type.id));
-
+export function CollectionCard({ collection }: { collection: CollectionWithStats }) {
     return (
         <Link href={`/collections/${collection.id}`}>
             <Card
@@ -27,12 +20,14 @@ export function CollectionCard({ collection }: { collection: Collection }) {
                         )}
                     </div>
                     <p className="text-xs text-muted-foreground">{collection.itemCount} items</p>
-                    <p className="line-clamp-1 text-sm text-muted-foreground">
-                        {collection.description}
-                    </p>
-                    {types.length > 0 && (
+                    {collection.description && (
+                        <p className="line-clamp-1 text-sm text-muted-foreground">
+                            {collection.description}
+                        </p>
+                    )}
+                    {collection.types.length > 0 && (
                         <div className="flex items-center gap-1.5">
-                            {types.map((type) => (
+                            {collection.types.map((type) => (
                                 <span key={type.id}>
                                     {renderItemTypeIcon(type.icon, "size-4", type.color)}
                                 </span>
