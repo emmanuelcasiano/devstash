@@ -26,6 +26,9 @@ interface SeedItem {
   content?: string;
   url?: string;
   language?: string;
+  tags?: string[];
+  isPinned?: boolean;
+  isFavorite?: boolean;
 }
 
 interface SeedCollection {
@@ -44,6 +47,8 @@ const collections: SeedCollection[] = [
         type: "snippet",
         language: "typescript",
         description: "Custom hooks for debouncing values and persisting state to localStorage.",
+        tags: ["react", "hooks", "typescript"],
+        isPinned: true,
         content: `import { useEffect, useState } from "react";
 
 export function useDebounce<T>(value: T, delay: number): T {
@@ -78,6 +83,8 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         type: "snippet",
         language: "typescript",
         description: "Context-based compound component pattern for a Tabs UI.",
+        tags: ["react", "patterns"],
+        isFavorite: true,
         content: `import { createContext, useContext, useState, type ReactNode } from "react";
 
 interface TabsContextValue {
@@ -136,6 +143,9 @@ export function truncate(text: string, maxLength: number): string {
         title: "Code Review Prompt",
         type: "prompt",
         description: "Ask an AI to review a diff for bugs and style issues.",
+        tags: ["ai", "code-review"],
+        isPinned: true,
+        isFavorite: true,
         content:
           "Review the following code diff. Identify correctness bugs, edge cases, and any deviations from the project's existing patterns. For each issue, give the file/line, a one-sentence description of the problem, and a concrete fix. Do not suggest stylistic nitpicks unless they affect readability significantly.",
       },
@@ -164,6 +174,7 @@ export function truncate(text: string, maxLength: number): string {
         type: "snippet",
         language: "dockerfile",
         description: "Multi-stage Dockerfile for a production Next.js build.",
+        tags: ["docker", "devops", "nextjs"],
         content: `FROM node:22-alpine AS base
 
 FROM base AS deps
@@ -193,6 +204,8 @@ CMD ["npm", "start"]
         type: "command",
         language: "bash",
         description: "Deploy the current branch straight to production on Vercel.",
+        tags: ["vercel", "deployment"],
+        isFavorite: true,
         content: "vercel --prod --yes",
       },
       {
@@ -218,6 +231,8 @@ CMD ["npm", "start"]
         type: "command",
         language: "bash",
         description: "Undo the last commit but keep the changes staged.",
+        tags: ["git"],
+        isPinned: true,
         content: "git reset --soft HEAD~1",
       },
       {
@@ -251,6 +266,8 @@ CMD ["npm", "start"]
         title: "Tailwind CSS Documentation",
         type: "link",
         description: "Utility-first CSS framework documentation.",
+        tags: ["css", "docs"],
+        isFavorite: true,
         url: "https://tailwindcss.com/docs",
       },
       {
@@ -347,6 +364,20 @@ async function main() {
           },
         });
       }
+
+      await prisma.item.update({
+        where: { id: item.id },
+        data: {
+          isPinned: itemSeed.isPinned ?? false,
+          isFavorite: itemSeed.isFavorite ?? false,
+          tags: {
+            connectOrCreate: (itemSeed.tags ?? []).map((tagName) => ({
+              where: { name: tagName },
+              create: { name: tagName },
+            })),
+          },
+        },
+      });
 
       const existingLink = await prisma.itemCollection.findUnique({
         where: { itemId_collectionId: { itemId: item.id, collectionId: collection.id } },
