@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatShortDate(date: string) {
+export function formatShortDate(date: string | Date) {
   return new Date(date).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",

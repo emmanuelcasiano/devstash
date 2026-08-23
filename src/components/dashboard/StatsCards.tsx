@@ -1,7 +1,8 @@
 import { FolderKanban, Heart, Package, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { mockCollections, mockItems } from "@/lib/mock-data";
+import { getCollectionStats } from "@/lib/db/collections";
+import { getItemStats } from "@/lib/db/items";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface Stat {
@@ -15,29 +16,34 @@ function StatIcon({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
     return <Icon className="size-5" style={{ color }} />;
 }
 
-export function StatsCards() {
+export async function StatsCards() {
+    const [itemStats, collectionStats] = await Promise.all([
+        getItemStats(),
+        getCollectionStats(),
+    ]);
+
     const stats: Stat[] = [
         {
             label: "Total Items",
-            value: mockItems.length,
+            value: itemStats.totalItems,
             icon: Package,
             color: "#3b82f6",
         },
         {
             label: "Collections",
-            value: mockCollections.length,
+            value: collectionStats.totalCollections,
             icon: FolderKanban,
             color: "#8b5cf6",
         },
         {
             label: "Favorite Items",
-            value: mockItems.filter((item) => item.isFavorite).length,
+            value: itemStats.favoriteItems,
             icon: Star,
             color: "#fde047",
         },
         {
             label: "Favorite Collections",
-            value: mockCollections.filter((collection) => collection.isFavorite).length,
+            value: collectionStats.favoriteCollections,
             icon: Heart,
             color: "#ec4899",
         },
