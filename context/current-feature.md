@@ -1,18 +1,25 @@
 # Current Feature
 
-<!-- Feature Name -->
+Stats & Sidebar (Real Data)
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+Implement @context/features/stats-sidebar-spec.md:
+
+- Show stats in the main area from real database data instead of `src/lib/mock-data.ts`
+- Show system item types in the sidebar with their icons, linking to `/items/[typename]`
+- Show actual collection data (not mock) in the sidebar
+- Add a "View all collections" link under the sidebar collections list, going to `/collections`
+- Keep star icons for favorite collections; for recents, show a colored circle based on the most-used item type in that collection instead
+- Create `src/lib/db/items.ts` with the needed database functions (reference `src/lib/db/collections.ts`)
 
 ## Notes
 
-<!-- Any extra notes -->
+- Full spec: @context/features/stats-sidebar-spec.md
 
 ## History
 
