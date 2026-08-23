@@ -34,6 +34,7 @@ interface SeedItem {
 interface SeedCollection {
   name: string;
   description: string;
+  isFavorite?: boolean;
   items: SeedItem[];
 }
 
@@ -41,6 +42,7 @@ const collections: SeedCollection[] = [
   {
     name: "React Patterns",
     description: "Reusable React patterns and hooks",
+    isFavorite: true,
     items: [
       {
         title: "useDebounce & useLocalStorage Hooks",
@@ -225,6 +227,7 @@ CMD ["npm", "start"]
   {
     name: "Terminal Commands",
     description: "Useful shell commands for everyday development",
+    isFavorite: true,
     items: [
       {
         title: "Undo Last Commit (Keep Changes)",
@@ -337,8 +340,14 @@ async function main() {
         data: {
           name: collectionSeed.name,
           description: collectionSeed.description,
+          isFavorite: collectionSeed.isFavorite ?? false,
           userId: user.id,
         },
+      });
+    } else {
+      collection = await prisma.collection.update({
+        where: { id: collection.id },
+        data: { isFavorite: collectionSeed.isFavorite ?? false },
       });
     }
 
