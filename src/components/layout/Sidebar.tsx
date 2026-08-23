@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Folder, PanelLeft, Settings, Star } from "lucide-react";
 
 import { getItemTypeIcon, getItemTypeSlug } from "@/lib/constants/item-types";
-import { mockCollections, mockItemTypes, mockItemTypesCounts, mockUser } from "@/lib/mock-data";
+import { mockUser } from "@/lib/mock-data";
+import type { CollectionWithStats } from "@/lib/db/collections";
+import type { ItemTypeWithCount } from "@/lib/db/items";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,14 +35,18 @@ function getInitials(name: string) {
 export function Sidebar({
     collapsed = false,
     showCollapseToggle = false,
+    itemTypes = [],
+    collections = [],
 }: {
     collapsed?: boolean;
     showCollapseToggle?: boolean;
+    itemTypes?: ItemTypeWithCount[];
+    collections?: CollectionWithStats[];
 }) {
     const { toggleSidebar } = useSidebar();
     const pathname = usePathname();
-    const favoriteCollections = mockCollections.filter((collection) => collection.isFavorite);
-    const recentCollections = mockCollections
+    const favoriteCollections = collections.filter((collection) => collection.isFavorite);
+    const recentCollections = collections
         .filter((collection) => !collection.isFavorite)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, RECENT_COLLECTIONS_LIMIT);
@@ -79,11 +85,11 @@ export function Sidebar({
                         <CollapsibleContent
                             className={cn(!collapsed && "flex flex-col gap-0.5", collapsed && "flex flex-col gap-1")}
                         >
-                            {mockItemTypes.map((type) => {
+                            {itemTypes.map((type) => {
                                 const Icon = getItemTypeIcon(type.icon);
                                 const href = `/items/${getItemTypeSlug(type.name)}`;
                                 const isActive = pathname === href;
-                                const count = mockItemTypesCounts[type.id] ?? 0;
+                                const label = type.name.charAt(0).toUpperCase() + type.name.slice(1);
 
                                 if (collapsed) {
                                     return (
@@ -102,7 +108,7 @@ export function Sidebar({
                                                 <Icon className="size-4" style={{ color: type.color }} />
                                             </TooltipTrigger>
                                             <TooltipContent side="right">
-                                                {type.name} · {count}
+                                                {label} · {type.count}
                                             </TooltipContent>
                                         </Tooltip>
                                     );
@@ -119,9 +125,9 @@ export function Sidebar({
                                     >
                                         <span className="flex items-center gap-2">
                                             <Icon className="size-4" style={{ color: type.color }} />
-                                            {type.name}
+                                            {label}
                                         </span>
-                                        <span className="text-xs text-muted-foreground">{count}</span>
+                                        <span className="text-xs text-muted-foreground">{type.count}</span>
                                     </Link>
                                 );
                             })}
@@ -209,11 +215,24 @@ export function Sidebar({
                                                     <Folder className="size-4 shrink-0" style={{ color: collection.color }} />
                                                     <span className="truncate">{collection.name}</span>
                                                 </span>
-                                                <span className="text-xs text-muted-foreground">{collection.itemCount}</span>
+                                                <span
+                                                    className="size-2.5 shrink-0 rounded-full"
+                                                    style={{ backgroundColor: collection.color }}
+                                                    aria-hidden
+                                                />
                                             </Link>
                                         )
                                     )}
                                 </div>
+                            )}
+
+                            {!collapsed && (
+                                <Link
+                                    href="/collections"
+                                    className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                                >
+                                    View all collections
+                                </Link>
                             )}
                         </CollapsibleContent>
                     </Collapsible>
@@ -254,7 +273,13 @@ export function Sidebar({
     );
 }
 
-export function SidebarAside() {
+export function SidebarAside({
+    itemTypes,
+    collections,
+}: {
+    itemTypes: ItemTypeWithCount[];
+    collections: CollectionWithStats[];
+}) {
     const { collapsed } = useSidebar();
 
     return (
@@ -264,7 +289,12 @@ export function SidebarAside() {
                 collapsed ? "w-16" : "w-64"
             )}
         >
-            <Sidebar collapsed={collapsed} showCollapseToggle />
+            <Sidebar
+                collapsed={collapsed}
+                showCollapseToggle
+                itemTypes={itemTypes}
+                collections={collections}
+            />
         </aside>
     );
 }

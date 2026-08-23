@@ -25,6 +25,10 @@ export interface ItemStats {
     favoriteItems: number;
 }
 
+export interface ItemTypeWithCount extends ItemTypeSummary {
+    count: number;
+}
+
 async function getCurrentUserId(): Promise<string | null> {
     const user = await prisma.user.findUnique({
         where: { email: DEMO_USER_EMAIL },
@@ -80,4 +84,32 @@ export async function getItemStats(): Promise<ItemStats> {
     const [totalItems, favoriteItems] = await Promise.all([prisma.item.count({ where: { userId } }), prisma.item.count({ where: { userId, isFavorite: true } })]);
 
     return { totalItems, favoriteItems };
+}
+
+export async function getItemTypesWithCounts(): Promise<ItemTypeWithCount[]> {
+    const userId = await getCurrentUserId();
+
+    const itemTypes = await prisma.itemType.findMany({
+        where: { isSystem: true },
+        orderBy: { id: "asc" },
+    });
+
+    if (!userId) {
+        return itemTypes.map((type) => ({ id: type.id, name: type.name, icon: type.icon, color: type.color, count: 0 }));
+    }
+
+    const counts = await prisma.item.groupBy({
+        by: ["itemTypeId"],
+        where: { userId },
+        _count: { _all: true },
+    });
+    const countByTypeId = new Map(counts.map((entry) => [entry.itemTypeId, entry._count._all]));
+
+    return itemTypes.map((type) => ({
+        id: type.id,
+        name: type.name,
+        icon: type.icon,
+        color: type.color,
+        count: countByTypeId.get(type.id) ?? 0,
+    }));
 }
