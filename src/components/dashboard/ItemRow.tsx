@@ -1,23 +1,21 @@
 import { Pin, Star } from "lucide-react";
 
 import { renderItemTypeIcon } from "@/components/shared/ItemTypeIcon";
-import { mockItemTypes, type Item } from "@/lib/mock-data";
+import type { ItemWithType } from "@/lib/db/items";
 import { formatShortDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-export function ItemRow({ item }: { item: Item }) {
-    const itemType = mockItemTypes.find((type) => type.id === item.itemTypeId);
-
+export function ItemRow({ item }: { item: ItemWithType }) {
     return (
         <div
             className="flex items-start gap-3 rounded-xl border-l-2 bg-card px-4 py-3 ring-1 ring-foreground/10"
-            style={{ borderLeftColor: itemType?.color }}
+            style={{ borderLeftColor: item.itemType.color }}
         >
             <div
                 className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-                style={{ backgroundColor: `${itemType?.color}1a` }}
+                style={{ backgroundColor: `${item.itemType.color}1a` }}
             >
-                {renderItemTypeIcon(itemType?.icon ?? "Code", "size-4", itemType?.color)}
+                {renderItemTypeIcon(item.itemType.icon, "size-4", item.itemType.color)}
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -27,7 +25,9 @@ export function ItemRow({ item }: { item: Item }) {
                         <Star className="size-3.5 shrink-0 fill-yellow-400 text-yellow-400" />
                     )}
                 </div>
-                <p className="truncate text-sm text-muted-foreground">{item.description}</p>
+                {item.description && (
+                    <p className="truncate text-sm text-muted-foreground">{item.description}</p>
+                )}
                 {item.tags.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                         {item.tags.map((tag) => (

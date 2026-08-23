@@ -20,6 +20,11 @@ export interface CollectionWithStats {
     types: CollectionTypeSummary[];
 }
 
+export interface CollectionStats {
+    totalCollections: number;
+    favoriteCollections: number;
+}
+
 async function getCurrentUserId(): Promise<string | null> {
     const user = await prisma.user.findUnique({
         where: { email: DEMO_USER_EMAIL },
@@ -80,4 +85,16 @@ export async function getRecentCollections(limit = 6): Promise<CollectionWithSta
             types: sortedTypes.map((entry) => entry.type),
         };
     });
+}
+
+export async function getCollectionStats(): Promise<CollectionStats> {
+    const userId = await getCurrentUserId();
+    if (!userId) return { totalCollections: 0, favoriteCollections: 0 };
+
+    const [totalCollections, favoriteCollections] = await Promise.all([
+        prisma.collection.count({ where: { userId } }),
+        prisma.collection.count({ where: { userId, isFavorite: true } }),
+    ]);
+
+    return { totalCollections, favoriteCollections };
 }
