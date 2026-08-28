@@ -26,3 +26,10 @@ export function getItemTypeIcon(iconName: string): LucideIcon {
 export function getItemTypeSlug(name: string): string {
     return name.toLowerCase();
 }
+
+// File and Image item types are Pro-only features.
+export const PRO_ITEM_TYPES = new Set(["file", "image"]);
+
+export function isProItemType(name: string): boolean {
+    return PRO_ITEM_TYPES.has(name.toLowerCase());
+}
