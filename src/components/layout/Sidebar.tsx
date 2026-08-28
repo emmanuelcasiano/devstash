@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Folder, PanelLeft, Settings, Star } from "lucide-react";
 
-import { getItemTypeIcon, getItemTypeSlug } from "@/lib/constants/item-types";
+import { getItemTypeIcon, getItemTypeSlug, isProItemType } from "@/lib/constants/item-types";
 import { mockUser } from "@/lib/mock-data";
 import type { CollectionWithStats } from "@/lib/db/collections";
 import type { ItemTypeWithCount } from "@/lib/db/items";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     Collapsible,
@@ -90,6 +91,7 @@ export function Sidebar({
                                 const href = `/items/${getItemTypeSlug(type.name)}`;
                                 const isActive = pathname === href;
                                 const label = type.name.charAt(0).toUpperCase() + type.name.slice(1);
+                                const isPro = isProItemType(type.name);
 
                                 if (collapsed) {
                                     return (
@@ -109,6 +111,7 @@ export function Sidebar({
                                             </TooltipTrigger>
                                             <TooltipContent side="right">
                                                 {label} · {type.count}
+                                                {isPro && " · PRO"}
                                             </TooltipContent>
                                         </Tooltip>
                                     );
@@ -126,6 +129,14 @@ export function Sidebar({
                                         <span className="flex items-center gap-2">
                                             <Icon className="size-4" style={{ color: type.color }} />
                                             {label}
+                                            {isPro && (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="h-4 rounded px-1 text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase"
+                                                >
+                                                    PRO
+                                                </Badge>
+                                            )}
                                         </span>
                                         <span className="text-xs text-muted-foreground">{type.count}</span>
                                     </Link>
