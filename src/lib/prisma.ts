@@ -1,7 +1,12 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
-const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL });
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+    throw new Error("DATABASE_URL is not set. Copy .env.example to .env and fill in your Neon connection strings.");
+}
+
+const adapter = new PrismaNeon({ connectionString });
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 

@@ -1,6 +1,14 @@
+import { createElement } from "react";
+
 import { getItemTypeIcon } from "@/lib/constants/item-types";
 
-export function renderItemTypeIcon(iconName: string, className?: string, color?: string) {
-    const Icon = getItemTypeIcon(iconName);
-    return <Icon className={className} style={{ color }} />;
+interface ItemTypeIconProps {
+    iconName: string;
+    className?: string;
+    color?: string;
+}
+
+export function ItemTypeIcon({ iconName, className, color }: ItemTypeIconProps) {
+    const icon = getItemTypeIcon(iconName);
+    return createElement(icon, { className, style: { color } });
 }

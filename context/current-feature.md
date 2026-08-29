@@ -1,18 +1,71 @@
 # Current Feature
 
-<!-- Feature Name -->
+Codebase Scanner Quick Wins
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+Complete
 
 ## Goals
 
-<!-- Goals & requirements -->
+Low-risk cleanups surfaced by the `codebase-scanner` audit. These are the "quick
+wins" only — the larger Sidebar split and the double-`getRecentCollections` fetch
+refactor are intentionally excluded and left for a dedicated feature.
+
+1. **Consolidate & cache `getCurrentUserId`.** The identical `getCurrentUserId()`
+   helper and `DEMO_USER_EMAIL` constant are copy-pasted in `src/lib/db/items.ts`
+   and `src/lib/db/collections.ts`, and run ~7 duplicate `SELECT id FROM users`
+   round-trips per `/dashboard` render. Move it to a single module
+   (`src/lib/db/current-user.ts`), wrap it in `React.cache` (`import { cache } from "react"`),
+   and import it from both files. No behaviour change.
+
+2. **Make `ItemTypeIcon` an actual component.** `src/components/shared/ItemTypeIcon.tsx`
+   currently exports a plain `renderItemTypeIcon(iconName, className, color)`
+   function called as `{renderItemTypeIcon(...)}`. Convert it to
+   `export function ItemTypeIcon({ iconName, className, color }: ItemTypeIconProps)`
+   and update the call sites in `CollectionCard.tsx` and `ItemRow.tsx` to
+   `<ItemTypeIcon … />`, matching the "functional components only" standard.
+
+3. **Guard required env vars.** `src/lib/prisma.ts` and `prisma/seed.ts` pass a
+   possibly-`undefined` `process.env.DATABASE_URL` straight into `PrismaNeon`.
+   Add a small guard that throws a clear error when `DATABASE_URL` (and
+   `DIRECT_URL` where used) is missing, so misconfiguration fails loudly instead
+   of as an opaque adapter error at first query.
+
+4. **Name the `toItemWithType` parameter type.** `src/lib/db/items.ts` uses a
+   large inline structural type for the `toItemWithType` parameter. Extract it to
+   a named interface (or derive from Prisma's generated payload type), per
+   "define interfaces for all … data models".
+
+5. **Narrow `formatShortDate`.** `src/lib/utils.ts` declares
+   `formatShortDate(date: string | Date)` but the only caller (`ItemRow.tsx`)
+   passes a `Date`. Drop the dead `string` branch and narrow the signature to
+   `formatShortDate(date: Date)`.
+
+6. **Add the missing `collectionId` index.** `ItemCollection` in
+   `prisma/schema.prisma` only has the composite PK `@@id([itemId, collectionId])`,
+   whose index leads with `itemId` and can't serve the `collection.items` lookups
+   filtered by `collectionId`. Add `@@index([collectionId])` and create the change
+   as a proper Prisma migration with `prisma migrate dev --name <name>` (never
+   `db push`), then `prisma migrate deploy` so the dev and prod branches stay in
+   sync. Run `prisma migrate status` afterward to confirm.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Every item is an internal cleanup with no user-facing change; verify via
+  `npm run lint` + `npm run build` and a spot-check of `/dashboard` SSR output.
+- Item 6 is the only one touching the database. It must go through the standard
+  Prisma migration flow (`prisma migrate dev` in development, `prisma migrate
+  deploy` for production) — do not `prisma db push` or hand-edit the DB — because
+  the dev and prod branches need to stay synced.
+- `src/lib/mock-data.ts` is deliberately left as-is in this pass, even though some
+  exports are currently unused.
+- Excluded as higher-risk (separate feature): splitting `Sidebar.tsx` into
+  `SidebarHeader` / `SidebarTypeList` / `SidebarCollectionList` / `SidebarFooter`,
+  and de-duplicating the twice-run `getRecentCollections` query between
+  `dashboard/layout.tsx` and `RecentCollections.tsx`.
+- Also noted but excluded: the hardcoded demo password in `prisma/seed.ts` — dev
+  seed only, worth gating on `NODE_ENV` later but not part of this pass.
 
 ## History
 

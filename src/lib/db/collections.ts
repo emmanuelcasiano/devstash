@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-
-const DEMO_USER_EMAIL = "demo@devstash.io";
+import { getCurrentUserId } from "@/lib/db/current-user";
 
 export interface CollectionTypeSummary {
     id: string;
@@ -23,14 +22,6 @@ export interface CollectionWithStats {
 export interface CollectionStats {
     totalCollections: number;
     favoriteCollections: number;
-}
-
-async function getCurrentUserId(): Promise<string | null> {
-    const user = await prisma.user.findUnique({
-        where: { email: DEMO_USER_EMAIL },
-        select: { id: true },
-    });
-    return user?.id ?? null;
 }
 
 export async function getRecentCollections(limit = 6): Promise<CollectionWithStats[]> {

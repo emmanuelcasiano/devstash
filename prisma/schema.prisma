@@ -175,6 +175,7 @@ model ItemCollection {
   collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
   @@id([itemId, collectionId])
+  @@index([collectionId])
   @@map("item_collections")
 }
 
