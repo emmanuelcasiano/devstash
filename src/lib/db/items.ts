@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-
-const DEMO_USER_EMAIL = "demo@devstash.io";
+import { getCurrentUserId } from "@/lib/db/current-user";
 
 export interface ItemTypeSummary {
     id: string;
@@ -29,15 +28,18 @@ export interface ItemTypeWithCount extends ItemTypeSummary {
     count: number;
 }
 
-async function getCurrentUserId(): Promise<string | null> {
-    const user = await prisma.user.findUnique({
-        where: { email: DEMO_USER_EMAIL },
-        select: { id: true },
-    });
-    return user?.id ?? null;
+interface PrismaItemWithRelations {
+    id: string;
+    title: string;
+    description: string | null;
+    isFavorite: boolean;
+    isPinned: boolean;
+    createdAt: Date;
+    itemType: ItemTypeSummary;
+    tags: { name: string }[];
 }
 
-function toItemWithType(item: { id: string; title: string; description: string | null; isFavorite: boolean; isPinned: boolean; createdAt: Date; itemType: ItemTypeSummary; tags: { name: string }[] }): ItemWithType {
+function toItemWithType(item: PrismaItemWithRelations): ItemWithType {
     return {
         id: item.id,
         title: item.title,

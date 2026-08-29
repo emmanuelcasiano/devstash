@@ -1,6 +1,6 @@
 import { Pin, Star } from "lucide-react";
 
-import { renderItemTypeIcon } from "@/components/shared/ItemTypeIcon";
+import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
 import type { ItemWithType } from "@/lib/db/items";
 import { formatShortDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ export function ItemRow({ item }: { item: ItemWithType }) {
                 className="flex size-9 shrink-0 items-center justify-center rounded-lg"
                 style={{ backgroundColor: `${item.itemType.color}1a` }}
             >
-                {renderItemTypeIcon(item.itemType.icon, "size-4", item.itemType.color)}
+                <ItemTypeIcon iconName={item.itemType.icon} className="size-4" color={item.itemType.color} />
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">

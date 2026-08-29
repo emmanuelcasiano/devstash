@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Star } from "lucide-react";
 
-import { renderItemTypeIcon } from "@/components/shared/ItemTypeIcon";
+import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
 import type { CollectionWithStats } from "@/lib/db/collections";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -29,7 +29,7 @@ export function CollectionCard({ collection }: { collection: CollectionWithStats
                         <div className="flex items-center gap-1.5">
                             {collection.types.map((type) => (
                                 <span key={type.id}>
-                                    {renderItemTypeIcon(type.icon, "size-4", type.color)}
+                                    <ItemTypeIcon iconName={type.icon} className="size-4" color={type.color} />
                                 </span>
                             ))}
                         </div>
