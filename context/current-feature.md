@@ -1,18 +1,34 @@
-# Current Feature
+# Current Feature: Auth UI — Sign In, Register & Sign Out (Phase 3)
 
 <!-- Feature Name -->
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Replace NextAuth default pages with custom UI.
+- **Sign In page (`/sign-in`)**: email + password fields, "Sign in with GitHub" button, link to register page, form validation and error display.
+- **Register page (`/register`)**: name, email, password, confirm-password fields; client validation (passwords match, email format); submit to `POST /api/auth/register`; redirect to `/sign-in` on success.
+- **Sidebar footer**: show user avatar (GitHub `image` or initials fallback), show user name, dropdown on avatar click with a "Sign out" action; clicking the avatar itself navigates to `/profile`.
+- Point NextAuth at the custom `/sign-in` page (via `pages.signIn`) so protected-route redirects land there instead of `/api/auth/signin`.
 
 ## Notes
 
-<!-- Any extra notes -->
+- **Avatar logic**: if the user has an `image` (from GitHub), use it; otherwise derive initials from the name (e.g. "Brad Traversy" → "BT").
+- **Initials component**: create a reusable avatar component that handles both the image and initials cases.
+- Testing checklist from the spec:
+  1. `/sign-in` renders the custom page.
+  2. Sign in with GitHub works.
+  3. Sign in with email/password works.
+  4. Avatar shows in the sidebar footer (GitHub image or initials).
+  5. Clicking the avatar opens the dropdown.
+  6. "Sign out" logs out and redirects.
+  7. `/register` creates a new account and redirects to `/sign-in`.
+- Spec file: `context/features/auth-phase-3-spec.md`.
+- Builds on Phase 1 (NextAuth v5 + GitHub) and Phase 2 (Credentials provider + `/api/auth/register`).
+- Folded in: `src/lib/db/current-user.ts` (`getCurrentUserId`) now resolves the id from the NextAuth session (`auth()`), replacing the hardcoded seeded `demo@devstash.io` lookup, so dashboard/sidebar data is scoped to the real signed-in user.
 
 ## History
 

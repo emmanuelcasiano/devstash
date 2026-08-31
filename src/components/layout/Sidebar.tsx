@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Folder, PanelLeft, Settings, Star } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { ChevronDown, ChevronsUpDown, Folder, LogOut, PanelLeft, Star, UserRound } from "lucide-react";
 
 import { getItemTypeIcon, getItemTypeSlug, isProItemType } from "@/lib/constants/item-types";
-import { mockUser } from "@/lib/mock-data";
 import type { CollectionWithStats } from "@/lib/db/collections";
 import type { ItemTypeWithCount } from "@/lib/db/items";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,36 +15,44 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 import { useSidebar } from "@/components/layout/sidebar-provider";
 import { cn } from "@/lib/utils";
 
 const RECENT_COLLECTIONS_LIMIT = 5;
 
-function getInitials(name: string) {
-    return name
-        .split(" ")
-        .map((part) => part[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase();
-}
+export type SidebarUser = {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+};
 
 export function Sidebar({
     collapsed = false,
     showCollapseToggle = false,
     itemTypes = [],
     collections = [],
+    user = null,
 }: {
     collapsed?: boolean;
     showCollapseToggle?: boolean;
     itemTypes?: ItemTypeWithCount[];
     collections?: CollectionWithStats[];
+    user?: SidebarUser | null;
 }) {
     const { toggleSidebar } = useSidebar();
     const pathname = usePathname();
+    const displayName = user?.name?.trim() || user?.email || "Account";
     const favoriteCollections = collections.filter((collection) => collection.isFavorite);
     const recentCollections = collections
         .filter((collection) => !collection.isFavorite)
@@ -256,29 +263,70 @@ export function Sidebar({
                     collapsed && "justify-center px-2"
                 )}
             >
-                {collapsed ? (
-                    <Tooltip>
-                        <TooltipTrigger
-                            render={<Avatar className="cursor-pointer" />}
-                        >
-                            <AvatarFallback>{getInitials(mockUser.name)}</AvatarFallback>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">{mockUser.name}</TooltipContent>
-                    </Tooltip>
-                ) : (
-                    <>
-                        <Avatar>
-                            <AvatarFallback>{getInitials(mockUser.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">{mockUser.name}</p>
-                            <p className="truncate text-xs text-muted-foreground">{mockUser.email}</p>
+                <DropdownMenu>
+                    <DropdownMenuTrigger
+                        render={
+                            collapsed ? (
+                                <button
+                                    type="button"
+                                    aria-label="Account menu"
+                                    className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                                />
+                            ) : (
+                                <button
+                                    type="button"
+                                    aria-label="Account menu"
+                                    className="flex w-full items-center gap-2 rounded-lg p-1 text-left outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+                                />
+                            )
+                        }
+                    >
+                        <UserAvatar name={displayName} image={user?.image} />
+                        {!collapsed && (
+                            <>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium text-foreground">
+                                        {displayName}
+                                    </p>
+                                    {user?.email && (
+                                        <p className="truncate text-xs text-muted-foreground">
+                                            {user.email}
+                                        </p>
+                                    )}
+                                </div>
+                                <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+                            </>
+                        )}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                        side="top"
+                        align={collapsed ? "start" : "end"}
+                        className="w-56"
+                    >
+                        <div className="flex flex-col gap-0.5 px-1.5 py-1">
+                            <span className="text-sm font-medium text-foreground">
+                                {displayName}
+                            </span>
+                            {user?.email && (
+                                <span className="text-xs text-muted-foreground">
+                                    {user.email}
+                                </span>
+                            )}
                         </div>
-                        <Button variant="ghost" size="icon-sm" aria-label="Settings">
-                            <Settings />
-                        </Button>
-                    </>
-                )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem render={<Link href="/profile" />}>
+                            <UserRound />
+                            Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => signOut({ redirectTo: "/sign-in" })}
+                        >
+                            <LogOut />
+                            Sign out
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );
@@ -287,9 +335,11 @@ export function Sidebar({
 export function SidebarAside({
     itemTypes,
     collections,
+    user = null,
 }: {
     itemTypes: ItemTypeWithCount[];
     collections: CollectionWithStats[];
+    user?: SidebarUser | null;
 }) {
     const { collapsed } = useSidebar();
 
@@ -305,6 +355,7 @@ export function SidebarAside({
                 showCollapseToggle
                 itemTypes={itemTypes}
                 collections={collections}
+                user={user}
             />
         </aside>
     );
