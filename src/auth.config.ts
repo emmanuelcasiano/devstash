@@ -16,6 +16,9 @@ import Credentials from "next-auth/providers/credentials";
  * real implementation is swapped in by `auth.ts` (Node runtime).
  */
 export default {
+  pages: {
+    signIn: "/sign-in",
+  },
   providers: [
     GitHub,
     Credentials({
