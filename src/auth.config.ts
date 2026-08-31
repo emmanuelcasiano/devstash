@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
+import Credentials from "next-auth/providers/credentials";
 
 /**
  * Edge-compatible auth configuration.
@@ -9,9 +10,22 @@ import GitHub from "next-auth/providers/github";
  * and used on its own by the proxy in `proxy.ts`.
  *
  * `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` are picked up automatically by Auth.js.
+ *
+ * The Credentials provider here is an edge-safe placeholder: `authorize` always
+ * returns `null` because bcrypt and Prisma cannot run in the Edge runtime. The
+ * real implementation is swapped in by `auth.ts` (Node runtime).
  */
 export default {
-  providers: [GitHub],
+  providers: [
+    GitHub,
+    Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      authorize: () => null,
+    }),
+  ],
   callbacks: {
     session({ session, token }) {
       if (token.sub) {
