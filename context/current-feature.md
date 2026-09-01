@@ -1,18 +1,79 @@
-# Current Feature
+# Current Feature: Email Verification on Register
 
 <!-- Feature Name -->
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
 <!-- Goals & requirements -->
 
+- After a user registers via `POST /api/auth/register`, send them a verification
+  email through Resend containing a unique, time-limited link they must click to
+  verify their address.
+- Clicking the link marks the account as verified by setting `User.emailVerified`
+  to the current timestamp, then lands the user on the sign-in page with a
+  "Email verified — you can sign in now" confirmation.
+- Credentials (email/password) sign-in is blocked until the address is verified.
+  An unverified user attempting to sign in gets a clear message and a way to
+  request a fresh verification email.
+- GitHub OAuth sign-in is unaffected — those accounts are already trusted and
+  should not be gated by this check.
+- Verification tokens are single-use and expire (proposed: 24 hours). Requesting
+  a new email invalidates/replaces any outstanding token for that address.
+- `npm run lint` and `npm run build` pass; flow verified end-to-end in the
+  browser (register → receive email → click link → sign in).
+
 ## Notes
 
 <!-- Any extra notes -->
+
+- **Email provider:** Resend. `RESEND_API_KEY` already exists in `.env` and is
+  listed in `.env.example`. Need to add the `resend` npm package. A verified
+  sending domain is required for real delivery; for local dev the
+  `onboarding@resend.dev` from-address works. Add an `EMAIL_FROM` env var (and
+  document it in `.env.example`) rather than hardcoding the sender.
+- **Base URL for links:** the email link must be absolute. Introduce an
+  `APP_URL` (or reuse `AUTH_URL`) env var for building
+  `${APP_URL}/api/auth/verify-email?token=...`; document it in `.env.example`.
+- **Token storage:** the Prisma schema already has a `VerificationToken` model
+  (`identifier`, `token`, `expires`) and `User.emailVerified DateTime?`. Prefer
+  reusing `VerificationToken` (identifier = email, token = random 32+ byte hex)
+  so no migration is needed. Confirm reuse doesn't collide with any Auth.js
+  adapter usage; if a dedicated model is cleaner, add it via
+  `prisma migrate dev` against the Neon `development` branch (never `db push`).
+- **Register route change:** after `prisma.user.create`, create a verification
+  token and send the email. New users are created with `emailVerified: null`
+  (already the default). The 201 response should tell the client to show a
+  "check your email" state instead of implying the account is ready to use.
+  Email send failure should not silently 500 the whole registration — decide
+  whether to roll back or surface a "account created, resend email" path.
+- **Sign-in gating:** in the real `authorize` in `src/auth.ts`, after the bcrypt
+  check, reject when `!user.emailVerified`. Because the Credentials provider
+  collapses all failures into a generic error, add an explicit way to
+  distinguish "unverified" (e.g. a dedicated `throw`/error code or a
+  pre-check endpoint) so `SignInForm` can show the resend affordance. Do not
+  touch the `auth.config.ts` edge placeholder.
+- **New surfaces likely needed:**
+  - `GET /api/auth/verify-email` — validate token, set `emailVerified`, delete
+    token, redirect to `/sign-in?verified=1`. Handle expired/invalid/used
+    tokens with a friendly error page or redirect param.
+  - `POST /api/auth/resend-verification` — accept an email, always respond
+    generically (no account enumeration), regenerate token + resend if the
+    account exists and is still unverified.
+  - `src/lib/email/` helper wrapping the Resend client + a verification email
+    template (keep server-only).
+  - `SignInForm` / register success UI copy for the new states
+    (`?verified=1`, unverified-on-sign-in).
+- **Existing test users** in the Neon `development` DB (`test@test.com`,
+  `phase3-test@example.com`, `test@test.com`) predate this and have
+  `emailVerified: null`; they'll need manual verification or a backfill to keep
+  signing in once gating is on.
+- Follows the project workflow: branch `feature/email-verification`, keep app
+  routes as server components with client leaves, validate inputs, no Claude
+  attribution in commits, ask before committing.
 
 ## History
 

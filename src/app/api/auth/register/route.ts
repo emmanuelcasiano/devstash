@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
+import { issueAndSendVerificationEmail } from "@/lib/auth/verification";
 
 interface RegisterBody {
   name?: unknown;
@@ -75,8 +76,22 @@ export async function POST(request: Request) {
       data: { name, email, password: hashedPassword },
     });
 
+    // The account exists but stays unverified until the emailed link is clicked.
+    // A send failure must not fail registration — the user can request a new
+    // link from the sign-in page.
+    let verificationEmailSent = true;
+    try {
+      await issueAndSendVerificationEmail({ email, name, request });
+    } catch (error) {
+      verificationEmailSent = false;
+      console.error("Failed to send verification email:", error);
+    }
+
     return NextResponse.json(
-      { user: { id: user.id, name: user.name, email: user.email } },
+      {
+        user: { id: user.id, name: user.name, email: user.email },
+        verificationEmailSent,
+      },
       { status: 201 },
     );
   } catch (error) {
