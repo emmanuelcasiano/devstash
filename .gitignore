@@ -54,3 +54,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mcp tooling
+.mcp.json
+.playwright-mcp/
