@@ -1,79 +1,18 @@
-# Current Feature: Email Verification on Register
+# Current Feature
 
 <!-- Feature Name -->
 
 ## Status
 
-In Progress
+<!-- Not Started|In Progress|Completed -->
 
 ## Goals
 
 <!-- Goals & requirements -->
 
-- After a user registers via `POST /api/auth/register`, send them a verification
-  email through Resend containing a unique, time-limited link they must click to
-  verify their address.
-- Clicking the link marks the account as verified by setting `User.emailVerified`
-  to the current timestamp, then lands the user on the sign-in page with a
-  "Email verified — you can sign in now" confirmation.
-- Credentials (email/password) sign-in is blocked until the address is verified.
-  An unverified user attempting to sign in gets a clear message and a way to
-  request a fresh verification email.
-- GitHub OAuth sign-in is unaffected — those accounts are already trusted and
-  should not be gated by this check.
-- Verification tokens are single-use and expire (proposed: 24 hours). Requesting
-  a new email invalidates/replaces any outstanding token for that address.
-- `npm run lint` and `npm run build` pass; flow verified end-to-end in the
-  browser (register → receive email → click link → sign in).
-
 ## Notes
 
 <!-- Any extra notes -->
-
-- **Email provider:** Resend. `RESEND_API_KEY` already exists in `.env` and is
-  listed in `.env.example`. Need to add the `resend` npm package. A verified
-  sending domain is required for real delivery; for local dev the
-  `onboarding@resend.dev` from-address works. Add an `EMAIL_FROM` env var (and
-  document it in `.env.example`) rather than hardcoding the sender.
-- **Base URL for links:** the email link must be absolute. Introduce an
-  `APP_URL` (or reuse `AUTH_URL`) env var for building
-  `${APP_URL}/api/auth/verify-email?token=...`; document it in `.env.example`.
-- **Token storage:** the Prisma schema already has a `VerificationToken` model
-  (`identifier`, `token`, `expires`) and `User.emailVerified DateTime?`. Prefer
-  reusing `VerificationToken` (identifier = email, token = random 32+ byte hex)
-  so no migration is needed. Confirm reuse doesn't collide with any Auth.js
-  adapter usage; if a dedicated model is cleaner, add it via
-  `prisma migrate dev` against the Neon `development` branch (never `db push`).
-- **Register route change:** after `prisma.user.create`, create a verification
-  token and send the email. New users are created with `emailVerified: null`
-  (already the default). The 201 response should tell the client to show a
-  "check your email" state instead of implying the account is ready to use.
-  Email send failure should not silently 500 the whole registration — decide
-  whether to roll back or surface a "account created, resend email" path.
-- **Sign-in gating:** in the real `authorize` in `src/auth.ts`, after the bcrypt
-  check, reject when `!user.emailVerified`. Because the Credentials provider
-  collapses all failures into a generic error, add an explicit way to
-  distinguish "unverified" (e.g. a dedicated `throw`/error code or a
-  pre-check endpoint) so `SignInForm` can show the resend affordance. Do not
-  touch the `auth.config.ts` edge placeholder.
-- **New surfaces likely needed:**
-  - `GET /api/auth/verify-email` — validate token, set `emailVerified`, delete
-    token, redirect to `/sign-in?verified=1`. Handle expired/invalid/used
-    tokens with a friendly error page or redirect param.
-  - `POST /api/auth/resend-verification` — accept an email, always respond
-    generically (no account enumeration), regenerate token + resend if the
-    account exists and is still unverified.
-  - `src/lib/email/` helper wrapping the Resend client + a verification email
-    template (keep server-only).
-  - `SignInForm` / register success UI copy for the new states
-    (`?verified=1`, unverified-on-sign-in).
-- **Existing test users** in the Neon `development` DB (`test@test.com`,
-  `phase3-test@example.com`, `test@test.com`) predate this and have
-  `emailVerified: null`; they'll need manual verification or a backfill to keep
-  signing in once gating is on.
-- Follows the project workflow: branch `feature/email-verification`, keep app
-  routes as server components with client leaves, validate inputs, no Claude
-  attribution in commits, ask before committing.
 
 ## History
 
@@ -93,3 +32,4 @@ In Progress
 - **2026-08-31** — Auth Setup: NextAuth v5 + GitHub Provider (Phase 1) (Completed): wired up NextAuth v5 (`next-auth@5.0.0-beta.32`) with `@auth/prisma-adapter@2.11.3` per `context/features/auth-phase-1-spec.md`, using the split-config pattern for edge compatibility. `src/auth.config.ts` holds the edge-safe config (GitHub provider + a `session` callback that copies `token.sub` → `session.user.id`, no adapter); `src/auth.ts` calls `NextAuth()` with `PrismaAdapter(prisma)` (reusing the `@/lib/prisma` singleton), `session: { strategy: "jwt" }`, and spreads `authConfig`, exporting `handlers`/`auth`/`signIn`/`signOut`. `src/app/api/auth/[...nextauth]/route.ts` re-exports `GET`/`POST` from the handlers. `src/proxy.ts` builds its own `NextAuth(authConfig)` instance (edge, adapter-free) and `export const proxy = auth(...)` redirects unauthenticated requests to NextAuth's default sign-in page (`/api/auth/signin`) with a `callbackUrl`; `matcher: ["/dashboard/:path*"]`. `src/types/next-auth.d.ts` augments `Session["user"]` with `id: string`. No custom `pages.signIn` — the default Auth.js sign-in page is used. Documented `AUTH_SECRET` / `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` in `.env.example` (the local `.env` already had all three set). Verified against the running dev server: `GET /dashboard` → 302 to `/api/auth/signin?callbackUrl=…`, the default sign-in page renders a "Sign in with GitHub" button, `/api/auth/providers` reports the GitHub OAuth provider, `GET /` stays 200 (unprotected), and `POST /api/auth/signin/github` → 302 to `github.com/login/oauth/authorize` with the right `client_id`/`redirect_uri`/PKCE challenge. The interactive GitHub login round-trip back to `/dashboard` still needs a manual click-through. Dashboard queries are still scoped to the seeded demo user; switching them to the real session user is Phase 2/3. Lint and `npm run build` pass. Merged to `main`, branch deleted.
 - **2026-08-31** — Auth Credentials: Email/Password Provider (Phase 2) (Completed): added a NextAuth Credentials provider alongside GitHub per `context/features/auth-phase-2-spec.md`, keeping the split-config pattern. `src/auth.config.ts` gains an edge-safe Credentials placeholder — it declares the `email`/`password` field metadata (so the default Auth.js sign-in page renders those inputs) but its `authorize` is a hard `() => null` because `bcryptjs`/Prisma can't run in the Edge runtime that also loads this config via `src/proxy.ts`. `src/auth.ts` defines the real `credentialsProvider` (guards that email/password are strings, looks the user up by lowercased email, returns `null` when the user has no `password` hash e.g. a GitHub-only account, then `bcrypt.compare`, returning `{ id, email, name, image }` on success) and substitutes it into the config via `authConfig.providers.map(p => typeof p !== "function" && p.id === "credentials" ? credentialsProvider : p)` — GitHub is passed as a bare function reference so the `typeof` check skips it. New `src/app/api/auth/register/route.ts` (`POST /api/auth/register`) reads a JSON body and runs a validation ladder (bad JSON / missing field / bad email regex / password < 8 chars / passwords not equal → 400), normalizes email to trimmed-lowercase, rejects an already-registered email with 409, hashes with `bcrypt.hash(pw, 12)` (same cost as `prisma/seed.ts`), inserts via `prisma.user.create`, and returns 201 with `{ id, name, email }` only; DB work is wrapped in try/catch that logs and returns a generic 500. No migration needed — `users.password` (`password TEXT`) already exists from the `init` migration, verified against the migration SQL. Verified against the running dev server: register returns 201 / 409 (duplicate) / 400 (mismatch, short password, missing fields, bad JSON); credentials sign-in via `callback/credentials` → 302 `/dashboard` with an `authjs.session-token`, `/api/auth/session` returns the user with the correct `id`, wrong password → 302 `signin?error=CredentialsSignin`; GitHub OAuth still lists in `/api/auth/providers` and still 302s to `github.com/login/oauth/authorize` with PKCE; the default sign-in page renders both the GitHub button and the email/password form. Known minor gap (not fixed): the `findUnique`-then-`create` duplicate check isn't atomic, so a rare race falls through to the generic 500 instead of a clean 409 (the `@unique` constraint still prevents a duplicate row). Testing created a real `test@test.com` user in the Neon `development` DB, left in place. Lint and `npm run build` pass. Merged to `main`, branch deleted.
 - **2026-08-31** — Auth UI: Sign In, Register & Sign Out (Phase 3) (Completed): replaced the default Auth.js pages with custom UI per `context/features/auth-phase-3-spec.md`. New `(auth)` route group whose **server-component** layout (`src/app/(auth)/layout.tsx`) centers the form, shows the DevStash logo, and redirects already-authenticated users to `/dashboard`; the pages `/(auth)/sign-in` and `/(auth)/register` are server components that render client-leaf forms (`src/components/auth/SignInForm.tsx`, `RegisterForm.tsx`). `SignInForm` has controlled email/password inputs, client validation, `signIn("credentials", { redirect: false })` with an inline "Invalid email or password." alert, a "Sign in with GitHub" button (`signIn("github", { redirectTo })`), reads `callbackUrl` / `error` / `registered` search params, and links to `/register`. `RegisterForm` validates name / email format / password ≥ 8 / passwords match client-side, `fetch`es `POST /api/auth/register`, surfaces the route's `error` string, and on success `router.push`es `/sign-in?registered=1` (where a success banner shows). `src/components/auth/GitHubIcon.tsx` is an inline SVG because lucide-react dropped brand icons. `src/auth.config.ts` now sets `pages.signIn: "/sign-in"` (so `/api/auth/signin` and OAuth errors land on the custom page); `src/proxy.ts` redirects protected routes to `/sign-in` with a **relative** `callbackUrl` (`pathname + search`). Sidebar footer: replaced the `mockUser` avatar with the real session user via a new reusable `src/components/shared/UserAvatar.tsx` (renders GitHub `image` when present, otherwise up-to-two-letter initials from the name via exported `getUserInitials`); the footer is now a `DropdownMenu` (opens upward) with a name/email header, a **Profile** item linking to `/profile`, and a destructive **Sign out** item calling `signOut({ redirectTo: "/sign-in" })`. `user` is fetched with `auth()` in `dashboard/layout.tsx` and threaded through `SidebarAside` / `SidebarMobile` → `Sidebar` (new exported `SidebarUser` type). Note: the generated shadcn `DropdownMenuLabel` maps to base-ui `Menu.GroupLabel` which throws outside a `Menu.Group`, so the header is a plain `<div>` instead. New minimal `src/app/profile/page.tsx` (server component: `auth()` guard → redirect to `/sign-in?callbackUrl=/profile`, then avatar + name + email + "Back to dashboard"). Added shadcn `dropdown-menu` and `label` components (base-ui based, `style: "base-nova"`). Also folded in: `src/lib/db/current-user.ts` `getCurrentUserId()` now returns `session.user.id` from `auth()` instead of the hardcoded `demo@devstash.io` lookup, so all dashboard/sidebar queries are scoped to the signed-in user (all callers already null-guard). Verified with Playwright against the dev server: `/sign-in` + `/register` render; register rejects a password mismatch client-side then succeeds → `/sign-in?registered=1` banner; wrong password → error alert, correct password → `/dashboard`; `callbackUrl` round-trip; signed-in user hitting `/sign-in` bounces to `/dashboard`; sidebar shows "AL" initials for a GitHub-less account; dropdown opens, Profile navigates, Sign out clears the session and redirects to `/sign-in`; GitHub button 302s to `github.com/login/oauth/authorize` with the right `client_id` + PKCE (interactive round-trip still needs a manual click-through); logged in as `demo@devstash.io` the seeded 18 items/5 collections show, logged in as a fresh account the dashboard is empty. During testing the dev server needed an HMR nudge to pick up the `current-user.ts` change (stale module, not a code bug). Test user `phase3-test@example.com` / `password123` created in the Neon `development` DB, left in place. Lint and `npm run build` pass. Merged to `main`, branch deleted.
+- **2026-09-01** — Email Verification on Register (Completed): new registrations now must confirm their email before they can sign in with a password. Added the `resend@^6.25.0` package. `src/lib/email/resend.ts` is a lazily-instantiated Resend client (`getResend()` throws a clear error if `RESEND_API_KEY` is unset) plus `getEmailFrom()` reading a new `EMAIL_FROM` env var; `src/lib/email/verification-email.ts` sends the confirmation message (HTML + text, the user's name HTML-escaped) and throws on a Resend error. `src/lib/auth/verification-token.ts` reuses the existing NextAuth `verification_tokens` table (identifier = email) — `createEmailVerificationToken()` writes a 32-byte hex token with a 24h expiry, replacing any prior token for that address inside a `$transaction`; `consumeEmailVerificationToken()` is single-use (deletes the row on read, returns `null` when the token is unknown or expired). `src/lib/auth/verification.ts` wraps token-issue + send in `issueAndSendVerificationEmail()` and derives the absolute link base from a new `APP_URL` env var (falling back to the request origin). No migration was needed — `verification_tokens` and `User.emailVerified` already exist from the `init` migration. `POST /api/auth/register` now issues + sends the link after `prisma.user.create`; a send failure is caught, logged, and the route still returns 201 with `verificationEmailSent: false` so the account isn't lost. New `GET /api/auth/verify-email?token=` consumes the token, sets `User.emailVerified = now()`, and redirects to `/sign-in?verified=1`; missing/invalid/expired/used tokens and a missing user redirect to `/sign-in?error=VerificationInvalid`. New `POST /api/auth/resend-verification` re-issues + resends for accounts that have a password and are still unverified, and always responds `{ ok: true }` on a well-formed request (400 on bad JSON / bad email, 500 only if the send itself throws) so it can't be used to enumerate registered emails. `src/auth.ts` gains `class EmailNotVerifiedError extends CredentialsSignin { code = "EmailNotVerified" }`; `authorize` throws it after a successful `bcrypt.compare` when `emailVerified` is null. The `auth.config.ts` edge placeholder is untouched, and the GitHub OAuth path (which never calls `authorize`) is unaffected. `SignInForm.tsx` reads `verified=1` (success banner), updated `registered=1` copy ("Check your email…"), and `error=VerificationInvalid`; on a failed credentials sign-in with `result.code === "EmailNotVerified"` — or on the invalid-link path — it shows an inline "Resend verification email" button that POSTs the entered email to the resend route and confirms with "…a new link is on its way." Also added `scripts/prune-users.ts` (separate `chore:` commit): deletes every user except `demo@devstash.io` plus their cascaded content, sweeps orphaned verification tokens and tags, dry-run by default with `--yes` to apply, prints the target DB host, aborts if the keep-target is missing. Verified with Playwright + Neon dev-branch SQL: register → `/sign-in?registered=1` banner + `emailVerified: null` user + 24h token row; unverified sign-in → "Verify your email address before signing in." + resend button (confirming `EmailNotVerifiedError.code` round-trips through `signIn(..., { redirect: false })`); token rotation (old link → `VerificationInvalid`); verify link → `verified=1`, `emailVerified` set, token deleted; verified sign-in → `/dashboard`; bogus token → `VerificationInvalid` + resend UI. **Known limitation:** Resend is in sandbox mode with the `onboarding@resend.dev` from-address and only delivers to the account owner (`casianoemmanuel2217@gmail.com`); real delivery to other recipients needs a verified domain at resend.com/domains and `EMAIL_FROM` switched to it — the register route degrades gracefully but the resend endpoint returns 500 when the send genuinely fails. Pre-existing password accounts with `emailVerified: null` can no longer sign in until backfilled (`prisma/seed.ts` still doesn't set `emailVerified`; `demo@devstash.io` was already verified from an earlier seed run). All non-demo users (including test accounts from this session) were pruned from the Neon `development` DB via the new script. Lint and `npm run build` pass. Merged to `main`, branch deleted.
