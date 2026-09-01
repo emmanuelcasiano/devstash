@@ -19,6 +19,9 @@ const OAUTH_ERRORS: Record<string, string> = {
     AccessDenied: "Access was denied. Please try again.",
 };
 
+const VERIFICATION_INVALID_MESSAGE =
+    "That verification link is invalid or has expired. Enter your email below and we'll send a new one.";
+
 export function SignInForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -27,21 +30,31 @@ export function SignInForm() {
     const callbackUrl =
         rawCallback && rawCallback.startsWith("/") ? rawCallback : "/dashboard";
     const justRegistered = searchParams.get("registered") === "1";
+    const justVerified = searchParams.get("verified") === "1";
     const urlError = searchParams.get("error");
+    const verificationLinkFailed = urlError === "VerificationInvalid";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(
-        urlError
-            ? OAUTH_ERRORS[urlError] ?? "Unable to sign in. Please try again."
-            : null,
+        verificationLinkFailed
+            ? VERIFICATION_INVALID_MESSAGE
+            : urlError
+              ? OAUTH_ERRORS[urlError] ?? "Unable to sign in. Please try again."
+              : null,
     );
     const [pending, setPending] = useState(false);
     const [githubPending, setGithubPending] = useState(false);
 
+    const [showResend, setShowResend] = useState(verificationLinkFailed);
+    const [resendPending, setResendPending] = useState(false);
+    const [resendDone, setResendDone] = useState(false);
+    const [resendError, setResendError] = useState<string | null>(null);
+
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError(null);
+        setResendError(null);
 
         if (!EMAIL_PATTERN.test(email)) {
             setError("Enter a valid email address.");
@@ -61,7 +74,13 @@ export function SignInForm() {
         setPending(false);
 
         if (!result || result.error) {
-            setError("Invalid email or password.");
+            if (result?.code === "EmailNotVerified") {
+                setError("Verify your email address before signing in.");
+                setShowResend(true);
+                setResendDone(false);
+            } else {
+                setError("Invalid email or password.");
+            }
             return;
         }
 
@@ -75,6 +94,32 @@ export function SignInForm() {
         void signIn("github", { redirectTo: callbackUrl });
     }
 
+    async function handleResend() {
+        setResendError(null);
+
+        if (!EMAIL_PATTERN.test(email)) {
+            setResendError("Enter your email address above first.");
+            return;
+        }
+
+        setResendPending(true);
+        try {
+            const response = await fetch("/api/auth/resend-verification", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            });
+            if (!response.ok) {
+                setResendError("Couldn't send the email. Please try again.");
+            } else {
+                setResendDone(true);
+            }
+        } catch {
+            setResendError("Couldn't send the email. Please try again.");
+        }
+        setResendPending(false);
+    }
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2 text-center">
@@ -84,9 +129,16 @@ export function SignInForm() {
                 </p>
             </div>
 
+            {justVerified && (
+                <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
+                    Email verified. You can sign in now.
+                </p>
+            )}
+
             {justRegistered && (
                 <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
-                    Account created. Sign in to continue.
+                    Account created. Check your email for a verification link to
+                    activate it.
                 </p>
             )}
 
@@ -97,6 +149,33 @@ export function SignInForm() {
                 >
                     {error}
                 </p>
+            )}
+
+            {showResend && (
+                <div className="flex flex-col gap-1 text-sm">
+                    {resendDone ? (
+                        <p className="text-muted-foreground">
+                            If that account still needs verifying, a new link is
+                            on its way.
+                        </p>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleResend}
+                            disabled={resendPending}
+                            className="self-start font-medium text-foreground underline underline-offset-4 disabled:opacity-60"
+                        >
+                            {resendPending
+                                ? "Sending…"
+                                : "Resend verification email"}
+                        </button>
+                    )}
+                    {resendError && (
+                        <p role="alert" className="text-destructive">
+                            {resendError}
+                        </p>
+                    )}
+                </div>
             )}
 
             <Button
