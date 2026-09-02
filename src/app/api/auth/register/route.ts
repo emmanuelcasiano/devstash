@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
-import { issueAndSendVerificationEmail } from "@/lib/auth/verification";
+import {
+  isEmailVerificationEnabled,
+  issueAndSendVerificationEmail,
+} from "@/lib/auth/verification";
 
 interface RegisterBody {
   name?: unknown;
@@ -71,25 +74,38 @@ export async function POST(request: Request) {
       );
     }
 
+    // When verification is disabled the account is usable immediately, so mark
+    // it verified up front and send nothing.
+    const verificationRequired = isEmailVerificationEnabled();
+
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword },
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        emailVerified: verificationRequired ? null : new Date(),
+      },
     });
 
     // The account exists but stays unverified until the emailed link is clicked.
     // A send failure must not fail registration — the user can request a new
     // link from the sign-in page.
-    let verificationEmailSent = true;
-    try {
-      await issueAndSendVerificationEmail({ email, name, request });
-    } catch (error) {
-      verificationEmailSent = false;
-      console.error("Failed to send verification email:", error);
+    let verificationEmailSent = false;
+    if (verificationRequired) {
+      verificationEmailSent = true;
+      try {
+        await issueAndSendVerificationEmail({ email, name, request });
+      } catch (error) {
+        verificationEmailSent = false;
+        console.error("Failed to send verification email:", error);
+      }
     }
 
     return NextResponse.json(
       {
         user: { id: user.id, name: user.name, email: user.email },
+        verificationRequired,
         verificationEmailSent,
       },
       { status: 201 },

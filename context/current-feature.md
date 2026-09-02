@@ -1,18 +1,60 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Toggle Email Verification
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add a single, easily-flipped switch that turns the email-verification-on-register
+  requirement on or off, so the app is usable while Resend is still in sandbox mode
+  (no verified domain — only the Resend account owner's address can receive mail).
+- Use an environment variable as the flag: `EMAIL_VERIFICATION_ENABLED`.
+  - Default to **enabled** when the var is unset or anything other than the literal
+    string `"false"`, so production stays safe if the var is forgotten.
+  - Only `EMAIL_VERIFICATION_ENABLED="false"` disables it.
+- Centralise the check in one helper (e.g. `isEmailVerificationEnabled()` in
+  `src/lib/auth/verification.ts`) — no scattered `process.env` reads.
+- When verification is **disabled**:
+  - `POST /api/auth/register` creates the user with `emailVerified` set to now and
+    does **not** issue or send a verification email.
+  - The Credentials `authorize` in `src/auth.ts` skips the `EmailNotVerifiedError`
+    throw, so existing accounts with `emailVerified: null` can also sign in.
+  - `POST /api/auth/resend-verification` becomes a no-op that still returns
+    `{ ok: true }` (keep the non-enumerable contract).
+  - `RegisterForm` sends the user straight to sign-in without the "check your
+    email" messaging; `SignInForm` does not show the verification banner/resend UI.
+- When verification is **enabled**, behaviour is exactly as it is today.
+- `.env.example` documents the new var; `npm run lint` and `npm run build` pass.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Existing email-verification implementation (2026-09-01) spans:
+  - `src/lib/auth/verification.ts` — `issueAndSendVerificationEmail()`, `getAppBaseUrl()`
+  - `src/lib/auth/verification-token.ts` — token create/consume against `verification_tokens`
+  - `src/lib/email/resend.ts`, `src/lib/email/verification-email.ts` — Resend send
+  - `src/app/api/auth/register/route.ts` — issues link after `prisma.user.create`
+  - `src/app/api/auth/verify-email/route.ts` — consumes token, sets `emailVerified`
+  - `src/app/api/auth/resend-verification/route.ts` — re-issues link
+  - `src/auth.ts` — `EmailNotVerifiedError` thrown in `authorize` when `emailVerified` is null
+  - `src/components/auth/SignInForm.tsx` / `RegisterForm.tsx` — banners + resend button
+- The `verify-email` route can stay untouched — with the flag off no tokens are
+  minted, but leaving the route working is harmless (and lets a stale link still
+  resolve).
+- Client components can't read a server-only env var directly. Options for the
+  UI branch, in order of preference:
+  1. Have the `register` API response carry a `verificationRequired: boolean`
+     (or reuse/rename `verificationEmailSent`) and let `RegisterForm` choose its
+     redirect from that. `SignInForm`'s banner is driven by the `registered` /
+     `verified` query params it already reads, so nothing extra is needed there.
+  2. A `NEXT_PUBLIC_EMAIL_VERIFICATION_ENABLED` mirror var (rejected — duplicates
+     the source of truth and can drift).
+- No database migration — this only changes control flow around existing columns
+  (`users.emailVerified`) and tables.
+- No Prisma/Neon schema work. No new packages.
+- Keep changes minimal and within existing patterns (server components,
+  `{ success, data, error }`-style responses, Zod not currently used in these
+  routes so match the hand-rolled validation ladder already there).
 
 ## History
 
