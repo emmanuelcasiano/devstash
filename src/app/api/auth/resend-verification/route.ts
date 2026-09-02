@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { issueAndSendVerificationEmail } from "@/lib/auth/verification";
+import {
+  isEmailVerificationEnabled,
+  issueAndSendVerificationEmail,
+} from "@/lib/auth/verification";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -29,6 +32,11 @@ export async function POST(request: Request) {
       { error: "Enter a valid email address." },
       { status: 400 },
     );
+  }
+
+  // Verification is switched off globally — nothing to resend.
+  if (!isEmailVerificationEnabled()) {
+    return NextResponse.json({ ok: true }, { status: 200 });
   }
 
   try {

@@ -30,6 +30,9 @@ export function SignInForm() {
     const callbackUrl =
         rawCallback && rawCallback.startsWith("/") ? rawCallback : "/dashboard";
     const justRegistered = searchParams.get("registered") === "1";
+    // RegisterForm appends `verify=0` when email verification is disabled, so the
+    // banner can drop the "check your email" instruction.
+    const registeredNeedsVerification = searchParams.get("verify") !== "0";
     const justVerified = searchParams.get("verified") === "1";
     const urlError = searchParams.get("error");
     const verificationLinkFailed = urlError === "VerificationInvalid";
@@ -137,8 +140,9 @@ export function SignInForm() {
 
             {justRegistered && (
                 <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
-                    Account created. Check your email for a verification link to
-                    activate it.
+                    {registeredNeedsVerification
+                        ? "Account created. Check your email for a verification link to activate it."
+                        : "Account created. You can sign in now."}
                 </p>
             )}
 

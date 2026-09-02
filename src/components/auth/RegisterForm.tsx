@@ -68,16 +68,23 @@ export function RegisterForm() {
                 }),
             });
 
+            const data = (await response.json().catch(() => null)) as
+                | { error?: string; verificationRequired?: boolean }
+                | null;
+
             if (!response.ok) {
-                const data = (await response
-                    .json()
-                    .catch(() => null)) as { error?: string } | null;
                 setError(data?.error ?? "Something went wrong. Please try again.");
                 setPending(false);
                 return;
             }
 
-            router.push("/sign-in?registered=1");
+            // When email verification is disabled the account is ready to use,
+            // so send them to sign-in without the "check your email" prompt.
+            router.push(
+                data?.verificationRequired === false
+                    ? "/sign-in?registered=1&verify=0"
+                    : "/sign-in?registered=1",
+            );
         } catch {
             setError("Something went wrong. Please try again.");
             setPending(false);

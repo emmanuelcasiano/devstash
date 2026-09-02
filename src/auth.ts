@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
 import authConfig from "@/auth.config";
+import { isEmailVerificationEnabled } from "@/lib/auth/verification";
 
 /**
  * Full auth configuration. Import `auth` from here everywhere except the proxy,
@@ -53,7 +54,7 @@ const credentialsProvider = Credentials({
       return null;
     }
 
-    if (!user.emailVerified) {
+    if (isEmailVerificationEnabled() && !user.emailVerified) {
       throw new EmailNotVerifiedError();
     }
 
