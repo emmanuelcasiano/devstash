@@ -34,6 +34,7 @@ export function SignInForm() {
     // banner can drop the "check your email" instruction.
     const registeredNeedsVerification = searchParams.get("verify") !== "0";
     const justVerified = searchParams.get("verified") === "1";
+    const justReset = searchParams.get("reset") === "1";
     const urlError = searchParams.get("error");
     const verificationLinkFailed = urlError === "VerificationInvalid";
 
@@ -138,6 +139,12 @@ export function SignInForm() {
                 </p>
             )}
 
+            {justReset && (
+                <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
+                    Password updated. You can sign in now.
+                </p>
+            )}
+
             {justRegistered && (
                 <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
                     {registeredNeedsVerification
@@ -216,7 +223,15 @@ export function SignInForm() {
                     />
                 </div>
                 <div className="flex flex-col gap-2">
-                    <Label htmlFor="password">Password</Label>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <Link
+                            href="/forgot-password"
+                            className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                        >
+                            Forgot password?
+                        </Link>
+                    </div>
                     <Input
                         id="password"
                         name="password"
