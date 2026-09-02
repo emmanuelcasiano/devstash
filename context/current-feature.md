@@ -1,18 +1,82 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Forgot Password / Password Reset
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add a "Forgot password?" link on the sign-in page that starts a self-service
+  password reset flow for email/password accounts.
+- New page `/(auth)/forgot-password` (server component + `ForgotPasswordForm`
+  client leaf): a single email input that POSTs to a new
+  `POST /api/auth/forgot-password` route. The route **always** responds
+  `{ ok: true }` on a well-formed request (no user enumeration, same pattern as
+  `resend-verification`) and only actually sends a link when the address belongs
+  to a user that has a `password` set (GitHub-only accounts have nothing to
+  reset). UI then shows a neutral "if an account exists, a reset link is on its
+  way" confirmation.
+- Reuse the existing NextAuth `VerificationToken` model (`verification_tokens`
+  table) for reset tokens via a new `src/lib/auth/password-reset-token.ts`
+  mirroring `verification-token.ts`: `createPasswordResetToken(email)` (32-byte
+  hex token, **1-hour** TTL, replaces any prior reset token for that address in a
+  `$transaction`) and `consumePasswordResetToken(token)` (single-use — row
+  deleted on read, returns `null` when unknown/expired).
+- Namespace reset-token rows so they can't collide with email-verification rows
+  in the shared table: store the identifier as `password-reset:<email>` (the
+  email-verification code does `deleteMany({ where: { identifier: email } })`, so
+  an un-prefixed reset row for the same address would be wiped by a resend, and
+  vice versa). The consume helper strips the prefix before returning the email.
+- New `src/lib/email/password-reset-email.ts` mirroring `verification-email.ts`
+  (HTML + text, name HTML-escaped, throws on Resend error). Subject e.g.
+  "Reset your DevStash password". The link points at the **page**
+  `${APP_URL}/reset-password?token=…` (not an API route — unlike `verify-email`),
+  falling back to the request origin via the existing `getAppBaseUrl(request)`.
+- New page `/(auth)/reset-password` (server component + `ResetPasswordForm`
+  client leaf): reads `token` from search params, new-password + confirm-password
+  inputs with the same client validation as `RegisterForm` (≥ 8 chars, must
+  match), POSTs `{ token, password, confirmPassword }` to a new
+  `POST /api/auth/reset-password` route. On success it redirects to
+  `/sign-in?reset=1`.
+- `POST /api/auth/reset-password`: validation ladder (bad JSON / missing fields /
+  password < 8 / mismatch → 400), consume the token (invalid/expired → 400 with a
+  distinct error the form turns into "This reset link is invalid or has expired"
+  plus a link back to `/forgot-password`), `bcrypt.hash(password, 12)` (same cost
+  as everywhere else), `prisma.user.update` the `password`. Since clicking a link
+  from the account's own inbox proves ownership, also set
+  `emailVerified: new Date()` when it's currently null. Generic 500 on unexpected
+  DB errors.
+- `SignInForm`: add the "Forgot password?" link (to `/forgot-password`) beside
+  the password label, and render a success banner when `?reset=1` is present
+  ("Password updated. You can sign in now."), matching the existing
+  `verified=1` / `registered=1` banner style.
 
 ## Notes
 
-<!-- Any extra notes -->
+- **Reuses** `RESEND_API_KEY`, `EMAIL_FROM`, `APP_URL` — no new env vars, no new
+  packages, **no DB migration** (`verification_tokens` already exists from the
+  `init` migration).
+- Password reset is independent of the `EMAIL_VERIFICATION_ENABLED` flag — a
+  reset link should work whether or not register-time verification is on. It is
+  still subject to the same Resend sandbox limitation noted in the email
+  verification history: real delivery to non-owner addresses needs a verified
+  domain, so end-to-end testing of the emailed link will use the owner address /
+  the token pulled straight from the Neon `development` DB.
+- Follow the split-config rule: all bcrypt/Prisma/Resend work stays in Node
+  route handlers and lib modules; `auth.config.ts` (edge) is untouched.
+- Pages live in the existing `(auth)` route group, whose layout already centers
+  the card and bounces already-authenticated users to `/dashboard`.
+- Out of scope (consistent with the current auth routes, which have none):
+  rate limiting / throttling on the forgot-password endpoint, and invalidating
+  active sessions after a password change.
+- Verify with Playwright against the dev server + Neon `development` SQL:
+  forgot-password returns `{ ok: true }` for both known and unknown addresses;
+  a reset-token row appears with the `password-reset:` prefix and ~1h expiry;
+  the reset page rejects a mismatch client-side, then succeeds → `/sign-in?reset=1`
+  banner; the old token no longer works (single-use) and an expired/garbage
+  token shows the invalid-link message; signing in with the new password →
+  `/dashboard`; the old password is rejected. Run `npm run lint` and
+  `npm run build`.
 
 ## History
 
