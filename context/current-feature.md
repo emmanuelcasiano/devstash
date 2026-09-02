@@ -1,18 +1,51 @@
-# Current Feature
+# Current Feature: Profile Page
 
 <!-- Feature Name -->
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Create a profile page at the `/profile` route (replacing the current minimal placeholder), protected by authentication.
+- Display user info: email, name, avatar (GitHub avatar if available, otherwise initials from name/email), and account creation date.
+- Show usage stats: total items, total collections, and a breakdown of item counts by each item type (snippets, prompts, notes, commands, links, files, images).
+- Add account actions:
+  - Change password — visible only for users who signed up with email/password (not GitHub-only OAuth accounts).
+  - Delete account — behind a confirmation dialog to prevent accidental deletion.
+- Follow existing codebase patterns for data fetching (server components + `src/lib/db/*` helpers) and component structure (server pages with small client leaves).
 
 ## Notes
 
-<!-- Any extra notes -->
+- Avatar logic: reuse the existing `UserAvatar` / `getUserInitials` helpers where possible — GitHub `image` when present, otherwise up-to-two-letter initials.
+- Change password button should only appear for accounts that have a `password` hash set; GitHub-only accounts have no password and should not see it.
+- Delete account must use a confirmation dialog and cascade-delete the user's content (schema already has `onDelete: Cascade` on items/collections/etc.).
+- Item type breakdown should show a count for each of the seven system types, including zero counts.
+- Route must redirect unauthenticated users to `/sign-in` (existing pattern: `auth()` guard → redirect with `callbackUrl`).
+
+### Implementation (done)
+
+- `src/lib/db/user.ts` — `getProfileUser()` returns `{ id, name, email, image, createdAt, hasPassword }` (never the hash) scoped to the session user via `getCurrentUserId()`.
+- `src/lib/utils.ts` — added `formatLongDate()` ("August 22, 2026").
+- `src/app/profile/page.tsx` — rewritten server component (`force-dynamic`): `auth()` guard → `/sign-in?callbackUrl=/profile`; parallel-fetches `getProfileUser`, `getItemStats`, `getCollectionStats`, `getItemTypesWithCounts`; renders user info (avatar/name/email/"Member since"), Usage (total items + collections stat cards, "Items by type" list over all 7 system types incl. zeros), and Account section.
+- `src/components/profile/ProfileAccountActions.tsx` — `"use client"` leaf. `ChangePassword` (only rendered when `hasPassword`) is a toggle-revealed inline form (current/new/confirm, ≥8 + match client validation) → `POST /api/auth/change-password`; `DeleteAccount` opens an `AlertDialog`, requires typing the exact email to enable the destructive button → `POST /api/auth/delete-account` then `signOut({ redirectTo: "/sign-in" })`.
+- `src/components/ui/alert-dialog.tsx` — new shadcn-style wrapper over `@base-ui/react/alert-dialog` (no such component existed; styled to match `sheet.tsx`/`card.tsx`).
+- `src/app/api/auth/change-password/route.ts` — session-auth'd; validation ladder; `bcrypt.compare` current password (→ 400 `code:"InvalidPassword"`), `bcrypt.hash(new, 12)`, update. GitHub-only → 400 `code:"NoPassword"`.
+- `src/app/api/auth/delete-account/route.ts` — session-auth'd; body `{ confirmation }` must equal the session email (case-insensitive) or 400; `prisma.user.delete` cascades items/collections/accounts/sessions.
+
+### Verified so far (Playwright, dev server, demo@devstash.io)
+
+- Signed-out `/profile` → `/sign-in?callbackUrl=/profile`.
+- Signed-in profile renders: "Demo User", "Member since August 22, 2026", 18 items / 5 collections, by-type snippet 4 / prompt 3 / command 5 / note 0 / file 0 / image 0 / link 6.
+- Change-password form toggles open; wrong current password → inline "Current password is incorrect." (`POST` 400).
+- `npm run lint` and `npm run build` pass.
+
+### Left to verify manually (user is doing this)
+
+- Change-password happy path + sign in with the new password.
+- Delete-account dialog: email-match gating, deletion + cascade + sign-out redirect.
+- GitHub-only account: change-password section hidden; avatar shows GitHub image.
 
 ## History
 

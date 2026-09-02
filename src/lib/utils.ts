@@ -11,3 +11,11 @@ export function formatShortDate(date: Date) {
     day: "numeric",
   })
 }
+
+export function formatLongDate(date: Date) {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+}
