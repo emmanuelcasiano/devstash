@@ -82,6 +82,10 @@ export function SignInForm() {
                 setError("Verify your email address before signing in.");
                 setShowResend(true);
                 setResendDone(false);
+            } else if (result?.code === "RateLimited") {
+                setError(
+                    "Too many sign-in attempts. Please wait a few minutes and try again.",
+                );
             } else {
                 setError("Invalid email or password.");
             }
@@ -114,7 +118,12 @@ export function SignInForm() {
                 body: JSON.stringify({ email }),
             });
             if (!response.ok) {
-                setResendError("Couldn't send the email. Please try again.");
+                const data = (await response.json().catch(() => null)) as
+                    | { error?: string }
+                    | null;
+                setResendError(
+                    data?.error ?? "Couldn't send the email. Please try again.",
+                );
             } else {
                 setResendDone(true);
             }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { issueAndSendPasswordResetEmail } from "@/lib/auth/password-reset";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -29,6 +30,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const limited = await enforceRateLimit(
+    "forgotPassword",
+    `${getClientIp(request)}:${email}`,
+  );
+  if (limited) return limited;
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });

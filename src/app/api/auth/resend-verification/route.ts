@@ -5,6 +5,7 @@ import {
   isEmailVerificationEnabled,
   issueAndSendVerificationEmail,
 } from "@/lib/auth/verification";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const limited = await enforceRateLimit(
+    "resendVerification",
+    `${getClientIp(request)}:${email}`,
+  );
+  if (limited) return limited;
 
   // Verification is switched off globally — nothing to resend.
   if (!isEmailVerificationEnabled()) {

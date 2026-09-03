@@ -3,6 +3,12 @@ import bcrypt from "bcryptjs";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  consumeRateLimit,
+  peekRateLimit,
+  rateLimitResponse,
+  resetRateLimit,
+} from "@/lib/rate-limit";
 
 interface ChangePasswordBody {
   currentPassword?: unknown;
@@ -64,6 +70,14 @@ export async function POST(request: Request) {
     );
   }
 
+  // Rate limit by user id, counting only wrong-current-password attempts so a
+  // legitimate rotation is never blocked.
+  const rateLimitKey = session.user.id;
+  const allowance = await peekRateLimit("changePassword", rateLimitKey);
+  if (!allowance.success) {
+    return rateLimitResponse(allowance.reset);
+  }
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -86,6 +100,7 @@ export async function POST(request: Request) {
 
     const currentMatches = await bcrypt.compare(currentPassword, user.password);
     if (!currentMatches) {
+      await consumeRateLimit("changePassword", rateLimitKey);
       return NextResponse.json(
         {
           error: "Current password is incorrect.",
@@ -100,6 +115,7 @@ export async function POST(request: Request) {
       where: { id: session.user.id },
       data: { password: hashedPassword },
     });
+    await resetRateLimit("changePassword", rateLimitKey);
   } catch (error) {
     console.error("Failed to change password:", error);
     return NextResponse.json(

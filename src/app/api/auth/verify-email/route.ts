@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { consumeEmailVerificationToken } from "@/lib/auth/verification-token";
 import { getAppBaseUrl } from "@/lib/auth/verification";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * GET /api/auth/verify-email?token=...
@@ -12,6 +13,9 @@ import { getAppBaseUrl } from "@/lib/auth/verification";
  * on sign-in with `?error=VerificationInvalid`.
  */
 export async function GET(request: Request) {
+  const limited = await enforceRateLimit("verifyEmail", getClientIp(request));
+  if (limited) return limited;
+
   const base = getAppBaseUrl(request);
   const invalid = NextResponse.redirect(
     new URL("/sign-in?error=VerificationInvalid", base),
