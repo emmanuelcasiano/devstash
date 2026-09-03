@@ -6,6 +6,7 @@ import {
   isEmailVerificationEnabled,
   issueAndSendVerificationEmail,
 } from "@/lib/auth/verification";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 interface RegisterBody {
   name?: unknown;
@@ -24,6 +25,9 @@ const MIN_PASSWORD_LENGTH = 8;
  * through the Credentials provider configured in `auth.ts`.
  */
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit("register", getClientIp(request));
+  if (limited) return limited;
+
   let body: RegisterBody;
   try {
     body = await request.json();

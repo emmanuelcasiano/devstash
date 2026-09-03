@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset-token";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 interface ResetBody {
   token?: unknown;
@@ -21,6 +22,9 @@ const MIN_PASSWORD_LENGTH = 8;
  * `/forgot-password`.
  */
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit("resetPassword", getClientIp(request));
+  if (limited) return limited;
+
   let body: ResetBody;
   try {
     body = await request.json();
