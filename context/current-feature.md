@@ -1,18 +1,30 @@
-# Current Feature
+# Current Feature: Items List View
 
 <!-- Feature Name -->
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add a dynamic route `/items/[type]` (e.g. `/items/snippets`, `/items/notes`) that lists type-filtered items.
+- Fetch and display items filtered by the route's item type.
+- Render the items as a responsive grid of `ItemCard` components.
+- Grid is two columns on medium screens and up (single column below).
+- Each card shows a left border colored by its item type.
+- Follow existing codebase patterns (server component page, `src/lib/db` query helper, scoped to the session user).
 
 ## Notes
 
-<!-- Any extra notes -->
+- Spec: `context/features/item-list-view-spec.md`.
+- Sidebar type links point to `/items/[typename]` with **singular** slugs (`getItemTypeSlug` = lowercased type name), so `/items/snippet`, `/items/link`, etc. This route now fills those in.
+- `src/lib/db/items.ts` gains `getItemsByType(typeSlug)` — resolves the system `ItemType` by name (accepts a trailing "s" too, so `/items/snippets` and `/items/snippet` both work), then returns `{ itemType, items }` for the current user (newest first), or `null` when the slug matches no system type (page then 404s). Uses the existing `getCurrentUserId()` cache.
+- New `src/components/items/ItemCard.tsx` — server component built from the shadcn `Card` + the same icon tile / pin-star / tag-badge patterns as `ItemRow`/`CollectionCard`. Left border colored by `item.itemType.color`.
+- New `src/app/(app)/items/[type]/page.tsx` — `force-dynamic` server page: `auth()` guard → `/sign-in?callbackUrl=${encodeURIComponent(`/items/${type}`)}` (the type slug is user-controlled, so it is URL-encoded), `notFound()` for unknown types, header with type icon + count, responsive grid `grid-cols-1 md:grid-cols-2` with `auto-rows-fr` so every card is the same height (`ItemCard` is `h-full` with its tag row pinned via `mt-auto`), empty state when the user has no items of that type. `generateMetadata` sets the tab title.
+- Review follow-ups: the `callbackUrl` value is now `encodeURIComponent`-wrapped (above). The `{label}s` heading pluralization was left as-is — a bare "s" is correct for all 7 immutable system types (Snippets … Links). The extra trailing whitespace on tag-less cards is the intended tradeoff of the uniform-height request.
+- Shared chrome refactor: introduced an `(app)` route group so `/dashboard`, `/items/[type]`, and `/profile` all render inside the same TopBar + Sidebar shell. `src/app/dashboard/layout.tsx` moved to `src/app/(app)/layout.tsx` (renamed `AppLayout`, typed `{ children: React.ReactNode }` like `(auth)/layout.tsx`); `dashboard/page.tsx`, `items/`, and `profile/page.tsx` moved under `(app)/`. Route-group parens don't change URLs, so all three paths are unchanged. The `min-h-screen` wrapper was dropped from the profile and items pages since `<main>` already scrolls. `proxy.ts` matcher is untouched (still `/dashboard/:path*`) — `/items/*` and `/profile` keep their own in-page `auth()` guards.
+- Verified in the browser (dev server, demo user): `/items/snippet` shows 4 cards in a 2-col grid with blue left borders + pins/stars/tags; `/items/notes` (plural) resolves to the empty Notes state; `/items/bogus` → 404; sidebar "Link" link navigates to `/items/link` (6 emerald-bordered cards). Lint and `npm run build` pass. (Chrome refactor: build passes with all routes at the same URLs; user is verifying the sidebar/header in the browser manually.)
 
 ## History
 
