@@ -28,6 +28,11 @@ export interface ItemTypeWithCount extends ItemTypeSummary {
     count: number;
 }
 
+export interface ItemsByType {
+    itemType: ItemTypeSummary;
+    items: ItemWithType[];
+}
+
 interface PrismaItemWithRelations {
     id: string;
     title: string;
@@ -114,4 +119,43 @@ export async function getItemTypesWithCounts(): Promise<ItemTypeWithCount[]> {
         color: type.color,
         count: countByTypeId.get(type.id) ?? 0,
     }));
+}
+
+/**
+ * Fetches the current user's items for a single system item type, newest first.
+ *
+ * `typeSlug` comes from the `/items/[type]` route. System type names are stored
+ * singular (`snippet`, `note`, …), so a trailing "s" is also accepted so that
+ * both `/items/snippet` (the sidebar links) and `/items/snippets` resolve.
+ * Returns `null` when the slug matches no system type so the page can 404.
+ */
+export async function getItemsByType(typeSlug: string): Promise<ItemsByType | null> {
+    const normalized = typeSlug.toLowerCase();
+    const candidates =
+        normalized.length > 1 && normalized.endsWith("s")
+            ? [normalized, normalized.slice(0, -1)]
+            : [normalized];
+
+    const type = await prisma.itemType.findFirst({
+        where: { isSystem: true, name: { in: candidates } },
+    });
+    if (!type) return null;
+
+    const itemType: ItemTypeSummary = {
+        id: type.id,
+        name: type.name,
+        icon: type.icon,
+        color: type.color,
+    };
+
+    const userId = await getCurrentUserId();
+    if (!userId) return { itemType, items: [] };
+
+    const items = await prisma.item.findMany({
+        where: { userId, itemTypeId: type.id },
+        orderBy: { createdAt: "desc" },
+        include: { itemType: true, tags: true },
+    });
+
+    return { itemType, items: items.map(toItemWithType) };
 }

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const SIDEBAR_COLLECTIONS_LIMIT = 50;
 
-export default async function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const [session, itemTypes, collections] = await Promise.all([
     auth(),
     getItemTypesWithCounts(),
