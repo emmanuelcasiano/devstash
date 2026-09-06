@@ -38,7 +38,7 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
     const label = toTitleCase(itemType.name);
 
     return (
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 p-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 p-6">
             <Link
                 href="/dashboard"
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -71,7 +71,7 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
                     No {label.toLowerCase()} items yet.
                 </p>
             ) : (
-                <div className="grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {items.map((item) => (
                         <ItemCard key={item.id} item={item} />
                     ))}

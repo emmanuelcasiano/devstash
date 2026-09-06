@@ -1,16 +1,44 @@
-# Current Feature
+# Current Feature: Item List View — Three Columns on Large Screens
 
 <!-- Feature Name -->
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Change the `/items/[type]` list grid from a two-column maximum to three columns on large
+  screens.
+- Keep it responsive: one column on small screens, two on medium, three on large.
+- Preserve the existing equal-height card behaviour (`auto-rows-fr` + `ItemCard` `h-full`
+  with the tag row pinned via `mt-auto`).
+- No change to data fetching, the empty state, the header, or `ItemCard`'s internals beyond
+  what's needed to make three columns look right.
 
 ## Notes
+
+- The grid is in `src/app/(app)/items/[type]/page.tsx` (~line 74), currently
+  `grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2`. Add an `lg:grid-cols-3` step
+  (keep `grid-cols-1` and `md:grid-cols-2`).
+- The page container is `mx-auto w-full max-w-5xl`. Three columns at `max-w-5xl` will be
+  tight; widening to `max-w-6xl` (or `max-w-7xl`) is likely needed — decide during
+  implementation by eye.
+- This is a Tailwind-class-only change: no server actions or utility functions are touched,
+  so there is likely nothing new to unit-test (confirm at the test step). Verify responsive
+  behaviour in the browser at the sm / md / lg breakpoints.
+- `ItemCard` is already a server component and `h-full`; a wider grid shouldn't need changes
+  there.
+
+## Implementation
+
+- `src/app/(app)/items/[type]/page.tsx`: grid class is now
+  `grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3`, and the page container
+  went from `max-w-5xl` to `max-w-6xl` so three columns aren't cramped. `ItemCard` untouched.
+- Verified in the browser (dev server, `demo@devstash.io`) at three widths: 480px → 1 column,
+  820px → 2 columns, 1440px → 3 columns; `auto-rows-fr` still gives every card in a row equal
+  height. No server actions or utilities changed, so no new Vitest tests.
+- `npm run lint` clean, `npm test` 3 files / 14 tests pass, `npm run build` exits 0.
 
 <!-- Any extra notes -->
 
