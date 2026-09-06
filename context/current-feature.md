@@ -1,16 +1,28 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Vitest Unit Testing Setup
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress (implemented, build/lint/test verified — awaiting commit approval)
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add Vitest as the project's unit test runner (`npm test` / `npm run test:watch`)
+- Scope unit testing to server actions and utility functions only — not React components
+- Support the existing `@/*` path alias so tests can import like app code does
+- Add example tests for existing pure utilities to prove the setup works end-to-end
+- Update `context/ai-interaction.md` (workflow step 4) and `context/coding-standards.md` to
+  reflect that unit testing is now available, and add the `npm test` command to `CLAUDE.md`
 
 ## Notes
+
+- No component testing library (jsdom, Testing Library) is being installed — this is
+  intentionally out of scope per the user's request.
+- The project has no `"use server"` Server Action files yet (mutations currently go through
+  API routes in `src/app/api/**`). "Server actions and utilities" is scoped to whatever
+  testable server-side logic exists today (`src/lib/**`) and to real Server Actions once they
+  exist (`src/actions/**` per `context/coding-standards.md`'s file organization).
+- Convention: test files use the `.test.ts` extension (not `.test.tsx`), which naturally keeps
+  component tests out of scope without needing an explicit exclude rule.
 
 <!-- Any extra notes -->
 

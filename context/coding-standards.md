@@ -83,6 +83,15 @@ Example v4 configuration:
 - Client components use Server Actions
 - Validate all inputs with Zod
 
+## Testing
+
+- Unit tests use Vitest (`npm test` to run once, `npm run test:watch` for watch mode)
+- Test server actions and utility functions only — not React components
+- Test files live next to the code they cover, named `*.test.ts` (never `.test.tsx`,
+  which keeps component tests out of scope by convention)
+- Use the `@/*` path alias in tests the same way app code does
+- Test the happy path and error cases; don't write a test just to have one
+
 ## Error Handling
 
 - Use try/catch in Server Actions

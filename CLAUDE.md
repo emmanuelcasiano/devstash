@@ -17,8 +17,11 @@ Read the following to get the full context of the project:
 - `npm run build` — production build
 - `npm run start` — run the production build
 - `npm run lint` — run ESLint (`eslint-config-next` core-web-vitals + typescript rules)
+- `npm test` — run Vitest unit tests once
+- `npm run test:watch` — run Vitest in watch mode
 
-There is no test setup in this repo yet.
+Unit tests (Vitest) cover server actions and utility functions only, not React components —
+see the Testing section in @context/coding-standards.md.
 
 ## Neon MCP
 
