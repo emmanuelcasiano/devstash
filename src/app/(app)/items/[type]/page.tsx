@@ -38,7 +38,7 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
     const label = toTitleCase(itemType.name);
 
     return (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 p-6">
+        <div className="flex flex-col gap-8">
             <Link
                 href="/dashboard"
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
