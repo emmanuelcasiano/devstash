@@ -33,6 +33,28 @@ export interface ItemsByType {
     items: ItemWithType[];
 }
 
+export interface ItemCollectionSummary {
+    id: string;
+    name: string;
+}
+
+/**
+ * The full detail view of a single item, as shown in the item drawer. Extends
+ * the card-level `ItemWithType` fields with the heavier content that is only
+ * fetched on click.
+ */
+export interface ItemDetail extends ItemWithType {
+    contentType: "TEXT" | "FILE" | "URL";
+    content: string | null;
+    url: string | null;
+    fileUrl: string | null;
+    fileName: string | null;
+    fileSize: number | null;
+    language: string | null;
+    updatedAt: Date;
+    collections: ItemCollectionSummary[];
+}
+
 interface PrismaItemWithRelations {
     id: string;
     title: string;
@@ -158,4 +180,53 @@ export async function getItemsByType(typeSlug: string): Promise<ItemsByType | nu
     });
 
     return { itemType, items: items.map(toItemWithType) };
+}
+
+/**
+ * Fetches a single item with its full detail (content, url, file metadata,
+ * language, collection memberships, timestamps) for the item drawer. Scoped to
+ * the current user, so requesting another user's item id returns `null` — the
+ * same as an unknown id, which the API route maps to a 404.
+ */
+export async function getItemById(id: string): Promise<ItemDetail | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const item = await prisma.item.findFirst({
+        where: { id, userId },
+        include: {
+            itemType: true,
+            tags: true,
+            collections: { include: { collection: { select: { id: true, name: true } } } },
+        },
+    });
+    if (!item) return null;
+
+    return {
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        isFavorite: item.isFavorite,
+        isPinned: item.isPinned,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        itemType: {
+            id: item.itemType.id,
+            name: item.itemType.name,
+            icon: item.itemType.icon,
+            color: item.itemType.color,
+        },
+        tags: item.tags.map((tag) => tag.name),
+        contentType: item.contentType,
+        content: item.content,
+        url: item.url,
+        fileUrl: item.fileUrl,
+        fileName: item.fileName,
+        fileSize: item.fileSize,
+        language: item.language,
+        collections: item.collections.map((link) => ({
+            id: link.collection.id,
+            name: link.collection.name,
+        })),
+    };
 }
