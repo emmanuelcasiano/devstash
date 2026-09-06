@@ -83,7 +83,7 @@ export function Sidebar({
             )}
             <ScrollArea className="min-h-0 flex-1">
                 <nav className={cn("flex flex-col gap-4 p-3", collapsed && "items-center px-2")}>
-                    <Collapsible defaultOpen={!collapsed}>
+                    <Collapsible defaultOpen>
                         {!collapsed && (
                             <CollapsibleTrigger className="group/trigger flex w-full items-center justify-between px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">
                                 Types
@@ -154,7 +154,7 @@ export function Sidebar({
 
                     <Separator />
 
-                    <Collapsible defaultOpen={!collapsed}>
+                    <Collapsible defaultOpen>
                         {!collapsed && (
                             <CollapsibleTrigger className="group/trigger flex w-full items-center justify-between px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">
                                 Collections
