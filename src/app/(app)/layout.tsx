@@ -3,6 +3,8 @@ import { TopBar } from "@/components/layout/TopBar";
 import { SidebarAside } from "@/components/layout/Sidebar";
 import { SidebarMobile } from "@/components/layout/SidebarMobile";
 import { SidebarProvider } from "@/components/layout/sidebar-provider";
+import { ItemDrawerProvider } from "@/components/items/item-drawer-provider";
+import { ItemDrawer } from "@/components/items/ItemDrawer";
 import { getRecentCollections } from "@/lib/db/collections";
 import { getItemTypesWithCounts } from "@/lib/db/items";
 
@@ -27,7 +29,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <SidebarAside itemTypes={itemTypes} collections={collections} user={user} />
           <SidebarMobile itemTypes={itemTypes} collections={collections} user={user} />
           <main className="flex-1 overflow-y-auto">
-            <div className="mx-auto w-full max-w-6xl p-4 md:p-6">{children}</div>
+            <ItemDrawerProvider>
+              <div className="mx-auto w-full max-w-6xl p-4 md:p-6">{children}</div>
+              <ItemDrawer />
+            </ItemDrawerProvider>
           </main>
         </div>
       </div>

@@ -1,14 +1,21 @@
+"use client";
+
 import { Pin, Star } from "lucide-react";
 
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
+import { useItemDrawer } from "@/components/items/item-drawer-provider";
 import type { ItemWithType } from "@/lib/db/items";
 import { formatShortDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 export function ItemRow({ item }: { item: ItemWithType }) {
+    const { openItem } = useItemDrawer();
+
     return (
-        <div
-            className="flex items-start gap-3 rounded-xl border-l-2 bg-card px-4 py-3 ring-1 ring-foreground/10"
+        <button
+            type="button"
+            onClick={() => openItem(item.id)}
+            className="flex w-full items-start gap-3 rounded-xl border-l-2 bg-card px-4 py-3 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             style={{ borderLeftColor: item.itemType.color }}
         >
             <div
@@ -41,6 +48,6 @@ export function ItemRow({ item }: { item: ItemWithType }) {
             <span className="shrink-0 text-xs text-muted-foreground">
                 {formatShortDate(item.createdAt)}
             </span>
-        </div>
+        </button>
     );
 }
