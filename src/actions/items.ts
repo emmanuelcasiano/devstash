@@ -2,15 +2,58 @@
 
 import { auth } from "@/auth";
 import {
+    createItem as createItemQuery,
     deleteItem as deleteItemQuery,
     updateItem as updateItemQuery,
     type ItemDetail,
 } from "@/lib/db/items";
-import { updateItemSchema } from "@/lib/validation/item";
+import { createItemSchema, updateItemSchema } from "@/lib/validation/item";
 
 export type ActionResult<T> =
     | { success: true; data: T }
     | { success: false; error: string };
+
+/**
+ * Creates a new item from the top-bar "New Item" dialog.
+ *
+ * Follows the project's `{ success, data, error }` contract: the session is
+ * checked with `auth()`, the payload is validated with Zod (the source of
+ * truth — the client only does light "required field" guards), and the new
+ * {@link ItemDetail} is returned so the caller can use it without a re-fetch.
+ */
+export async function createItem(
+    input: unknown,
+): Promise<ActionResult<ItemDetail>> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return {
+            success: false,
+            error: "You must be signed in to create items.",
+        };
+    }
+
+    const parsed = createItemSchema.safeParse(input);
+    if (!parsed.success) {
+        const message = parsed.error.issues
+            .map((issue) => issue.message)
+            .join(" ");
+        return { success: false, error: message || "Invalid input." };
+    }
+
+    try {
+        const created = await createItemQuery(parsed.data);
+        if (!created) {
+            return { success: false, error: "Could not create the item." };
+        }
+        return { success: true, data: created };
+    } catch (error) {
+        console.error("Failed to create item:", error);
+        return {
+            success: false,
+            error: "Something went wrong. Please try again.",
+        };
+    }
+}
 
 /**
  * Updates one item's editable fields from the item drawer's edit mode.

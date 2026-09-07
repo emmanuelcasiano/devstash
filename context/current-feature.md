@@ -1,18 +1,31 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Item Create
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add new items through a modal dialog opened from the "New Item" button in the top bar.
+- Build the modal with the shadcn `Dialog` component.
+- Include a type selector covering snippet, prompt, command, note, and link.
+- Show fields conditionally based on the selected type:
+  - All types: title (required), description, tags
+  - snippet / command: content, language
+  - prompt / note: content
+  - link: URL (required)
+- Add a `createItem` server action in `src/actions/items.ts` with Zod validation.
+- Add a `createItem` query function in `src/lib/db/items.ts`.
+- On success: show a toast, close the modal, and refresh.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Spec: `context/features/item-create-spec.md`.
+- File and Image types are Pro-only and are intentionally excluded from the type selector.
+- Reuse the existing validation pattern in `src/lib/validation/item.ts` (pure module, Vitest-covered) — extend it with a `createItemSchema` and any shared field helpers rather than duplicating logic in the action.
+- Server actions return the project's `{ success, data } | { success, error }` shape; mutations already establish `auth()` guard + ownership scoping patterns (see `updateItem` / `deleteItem`).
+- Toast via `sonner`; `router.refresh()` after close so server-rendered dashboard / items-list counts update.
+- New items need `contentType` set correctly (TEXT for snippet/prompt/command/note, URL for link) and the resolved system `itemTypeId`.
 
 ## History
 
