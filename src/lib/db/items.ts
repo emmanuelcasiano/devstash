@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/db/current-user";
-import type { UpdateItemInput } from "@/lib/validation/item";
+import type { CreateItemInput, UpdateItemInput } from "@/lib/validation/item";
 
 export interface ItemTypeSummary {
     id: string;
@@ -230,6 +230,52 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
             name: link.collection.name,
         })),
     };
+}
+
+/**
+ * Creates a new item for the current user from the "New Item" dialog and returns
+ * the full {@link ItemDetail} so the caller can render it without a second fetch.
+ *
+ * The `type` slug is resolved to a system {@link ItemType}; an unknown slug (or
+ * no signed-in user) resolves to `null` and nothing is written. `contentType` is
+ * derived from the type — `URL` for links, `TEXT` for everything else — and the
+ * fields that do not apply to the chosen type are stored as `null`.
+ */
+export async function createItem(
+    data: CreateItemInput,
+): Promise<ItemDetail | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const type = await prisma.itemType.findFirst({
+        where: { isSystem: true, name: data.type },
+        select: { id: true },
+    });
+    if (!type) return null;
+
+    const isLink = data.type === "link";
+
+    const created = await prisma.item.create({
+        data: {
+            title: data.title,
+            description: data.description,
+            content: isLink ? null : data.content,
+            url: isLink ? data.url : null,
+            language: isLink ? null : data.language,
+            contentType: isLink ? "URL" : "TEXT",
+            userId,
+            itemTypeId: type.id,
+            tags: {
+                connectOrCreate: data.tags.map((name) => ({
+                    where: { name },
+                    create: { name },
+                })),
+            },
+        },
+        select: { id: true },
+    });
+
+    return getItemById(created.id);
 }
 
 /**

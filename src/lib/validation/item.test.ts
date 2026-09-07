@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { parseTagsInput, updateItemSchema } from "@/lib/validation/item";
+import {
+    createItemSchema,
+    parseTagsInput,
+    updateItemSchema,
+} from "@/lib/validation/item";
 
 describe("updateItemSchema", () => {
     it("accepts a minimal valid payload and trims the title", () => {
@@ -84,6 +88,94 @@ describe("updateItemSchema", () => {
         expect(result.success).toBe(true);
         if (result.success) {
             expect(result.data.tags).toEqual(["react", "hooks"]);
+        }
+    });
+});
+
+describe("createItemSchema", () => {
+    it("accepts a minimal snippet payload", () => {
+        const result = createItemSchema.safeParse({
+            type: "snippet",
+            title: "  useAuth hook  ",
+            tags: [],
+        });
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.type).toBe("snippet");
+            expect(result.data.title).toBe("useAuth hook");
+            expect(result.data.content).toBeNull();
+            expect(result.data.url).toBeNull();
+            expect(result.data.language).toBeNull();
+        }
+    });
+
+    it("rejects an unknown type", () => {
+        expect(
+            createItemSchema.safeParse({
+                type: "file",
+                title: "Report",
+                tags: [],
+            }).success,
+        ).toBe(false);
+    });
+
+    it("rejects an empty title", () => {
+        expect(
+            createItemSchema.safeParse({
+                type: "note",
+                title: "   ",
+                tags: [],
+            }).success,
+        ).toBe(false);
+    });
+
+    it("requires a URL when the type is link", () => {
+        const missing = createItemSchema.safeParse({
+            type: "link",
+            title: "Docs",
+            tags: [],
+        });
+        expect(missing.success).toBe(false);
+        if (!missing.success) {
+            expect(
+                missing.error.issues.some((issue) =>
+                    issue.message.includes("URL is required"),
+                ),
+            ).toBe(true);
+        }
+
+        const present = createItemSchema.safeParse({
+            type: "link",
+            title: "Docs",
+            url: "https://example.com/docs",
+            tags: [],
+        });
+        expect(present.success).toBe(true);
+        if (present.success) {
+            expect(present.data.url).toBe("https://example.com/docs");
+        }
+    });
+
+    it("does not require a URL for non-link types", () => {
+        const result = createItemSchema.safeParse({
+            type: "command",
+            title: "git reset",
+            tags: [],
+        });
+        expect(result.success).toBe(true);
+        if (result.success) expect(result.data.url).toBeNull();
+    });
+
+    it("trims, drops empty, and de-duplicates tags", () => {
+        const result = createItemSchema.safeParse({
+            type: "prompt",
+            title: "Review prompt",
+            tags: [" ai ", "ai", "", "review"],
+        });
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.tags).toEqual(["ai", "review"]);
         }
     });
 });
