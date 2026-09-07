@@ -275,3 +275,25 @@ export async function updateItem(
 
     return getItemById(id);
 }
+
+/**
+ * Permanently deletes one item.
+ *
+ * Scoped to the current user: an item id that the signed-in user does not own
+ * (or that does not exist) resolves to `false` and nothing is deleted. The
+ * schema's `ItemCollection` join rows cascade on `Item` delete; `Tag` rows are
+ * shared and left in place. Returns `true` when a row was removed.
+ */
+export async function deleteItem(id: string): Promise<boolean> {
+    const userId = await getCurrentUserId();
+    if (!userId) return false;
+
+    const owned = await prisma.item.findFirst({
+        where: { id, userId },
+        select: { id: true },
+    });
+    if (!owned) return false;
+
+    await prisma.item.delete({ where: { id } });
+    return true;
+}
