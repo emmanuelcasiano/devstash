@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { createItem } from "@/actions/items";
+import { CodeEditor } from "@/components/items/CodeEditor";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -27,6 +28,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { isCodeItemType } from "@/lib/code-language";
+import { getItemTypeColor } from "@/lib/constants/item-types";
 import { parseTagsInput, type CreateItemType } from "@/lib/validation/item";
 import { cn } from "@/lib/utils";
 
@@ -68,11 +71,21 @@ const EMPTY_FORM: NewItemForm = {
 
 const DEFAULT_TYPE: CreateItemType = "snippet";
 
-export function NewItemDialog() {
+interface NewItemDialogProps {
+    /** Item type the dialog opens with. Defaults to snippet. */
+    defaultType?: CreateItemType;
+    /** Trigger button text. Defaults to "New Item". */
+    triggerLabel?: string;
+}
+
+export function NewItemDialog({
+    defaultType = DEFAULT_TYPE,
+    triggerLabel = "New Item",
+}: NewItemDialogProps = {}) {
     const router = useRouter();
 
     const [open, setOpen] = useState(false);
-    const [type, setType] = useState<CreateItemType>(DEFAULT_TYPE);
+    const [type, setType] = useState<CreateItemType>(defaultType);
     const [form, setForm] = useState<NewItemForm>(EMPTY_FORM);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -80,6 +93,9 @@ export function NewItemDialog() {
     const showContentField = CONTENT_TYPES.has(type);
     const showLanguageField = LANGUAGE_TYPES.has(type);
     const showUrlField = type === "link";
+    // Snippets and commands get the Monaco code editor; prompts and notes keep
+    // the plain textarea.
+    const isCodeType = isCodeItemType(type);
 
     const canSubmit =
         form.title.trim() !== "" &&
@@ -96,7 +112,7 @@ export function NewItemDialog() {
     }
 
     function resetForm() {
-        setType(DEFAULT_TYPE);
+        setType(defaultType);
         setForm(EMPTY_FORM);
         setError(null);
     }
@@ -104,7 +120,11 @@ export function NewItemDialog() {
     function handleOpenChange(next: boolean) {
         if (submitting) return;
         setOpen(next);
-        if (!next) resetForm();
+        if (next) {
+            setType(defaultType);
+        } else {
+            resetForm();
+        }
     }
 
     async function handleSubmit(event: React.FormEvent) {
@@ -138,16 +158,26 @@ export function NewItemDialog() {
         router.refresh();
     }
 
+    const selectedOption =
+        TYPE_OPTIONS.find((option) => option.value === type) ?? TYPE_OPTIONS[0];
+    const SelectedIcon = selectedOption.icon;
+
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger render={<Button size="sm" />}>
                 <Plus />
-                New Item
+                {triggerLabel}
             </DialogTrigger>
 
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>New item</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                        <SelectedIcon
+                            className="size-4"
+                            style={{ color: getItemTypeColor(type) }}
+                        />
+                        New {selectedOption.label.toLowerCase()}
+                    </DialogTitle>
                     <DialogDescription>
                         Add a snippet, prompt, command, note, or link to your
                         stash.
@@ -174,7 +204,14 @@ export function NewItemDialog() {
                                                 : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
                                         )}
                                     >
-                                        <Icon className="size-4" />
+                                        <Icon
+                                            className="size-4"
+                                            style={{
+                                                color: getItemTypeColor(
+                                                    option.value,
+                                                ),
+                                            }}
+                                        />
                                         {option.label}
                                     </button>
                                 );
@@ -212,13 +249,27 @@ export function NewItemDialog() {
 
                     {showContentField && (
                         <Field label="Content" htmlFor="new-item-content">
-                            <Textarea
-                                id="new-item-content"
-                                value={form.content}
-                                onChange={updateField("content")}
-                                rows={6}
-                                className="font-mono text-xs leading-relaxed md:text-xs"
-                            />
+                            {isCodeType ? (
+                                <CodeEditor
+                                    value={form.content}
+                                    language={form.language}
+                                    typeName={type}
+                                    onValueChange={(value) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            content: value,
+                                        }))
+                                    }
+                                />
+                            ) : (
+                                <Textarea
+                                    id="new-item-content"
+                                    value={form.content}
+                                    onChange={updateField("content")}
+                                    rows={6}
+                                    className="font-mono text-xs leading-relaxed md:text-xs"
+                                />
+                            )}
                         </Field>
                     )}
 

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
+import { CodeEditor } from "@/components/items/CodeEditor";
 import { useItemDrawer } from "@/components/items/item-drawer-provider";
 import {
     AlertDialog,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/sheet";
 import { deleteItem, updateItem } from "@/actions/items";
 import type { ItemDetail } from "@/lib/db/items";
+import { isCodeItemType } from "@/lib/code-language";
 import { parseTagsInput } from "@/lib/validation/item";
 import { cn, formatFileSize, formatLongDate } from "@/lib/utils";
 
@@ -53,6 +55,12 @@ type ItemDetailPayload = Omit<ItemDetail, "createdAt" | "updatedAt"> & {
 /** Item types whose content textarea / language input are shown in edit mode. */
 const CONTENT_TYPES = new Set(["snippet", "prompt", "command", "note"]);
 const LANGUAGE_TYPES = new Set(["snippet", "command"]);
+
+/**
+ * The drawer body scrolls, so let the code editor grow tall enough to show
+ * almost any snippet in full before it falls back to its own scrollbar.
+ */
+const DRAWER_CODE_MAX_HEIGHT = 1200;
 
 interface EditForm {
     title: string;
@@ -144,6 +152,9 @@ export function ItemDrawer() {
     const showContentField = CONTENT_TYPES.has(typeName);
     const showLanguageField = LANGUAGE_TYPES.has(typeName);
     const showUrlField = typeName === "link";
+    // Snippets and commands get the Monaco code editor; prompts and notes keep
+    // the plain textarea / <pre>.
+    const isCodeType = isCodeItemType(typeName);
 
     function retry() {
         setErrorId(null);
@@ -440,13 +451,28 @@ export function ItemDrawer() {
 
                                     {showContentField && (
                                         <Field label="Content" htmlFor="item-content">
-                                            <Textarea
-                                                id="item-content"
-                                                value={form.content}
-                                                onChange={updateField("content")}
-                                                rows={8}
-                                                className="font-mono text-xs leading-relaxed md:text-xs"
-                                            />
+                                            {isCodeType ? (
+                                                <CodeEditor
+                                                    value={form.content}
+                                                    language={form.language}
+                                                    typeName={typeName}
+                                                    maxHeight={DRAWER_CODE_MAX_HEIGHT}
+                                                    onValueChange={(value) =>
+                                                        setForm((prev) => ({
+                                                            ...prev,
+                                                            content: value,
+                                                        }))
+                                                    }
+                                                />
+                                            ) : (
+                                                <Textarea
+                                                    id="item-content"
+                                                    value={form.content}
+                                                    onChange={updateField("content")}
+                                                    rows={8}
+                                                    className="font-mono text-xs leading-relaxed md:text-xs"
+                                                />
+                                            )}
                                         </Field>
                                     )}
 
@@ -497,9 +523,19 @@ export function ItemDrawer() {
 
                                     {item.content && (
                                         <Section label="Content">
-                                            <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs text-foreground">
-                                                {item.content}
-                                            </pre>
+                                            {isCodeType ? (
+                                                <CodeEditor
+                                                    value={item.content}
+                                                    language={item.language}
+                                                    typeName={typeName}
+                                                    maxHeight={DRAWER_CODE_MAX_HEIGHT}
+                                                    readOnly
+                                                />
+                                            ) : (
+                                                <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs text-foreground">
+                                                    {item.content}
+                                                </pre>
+                                            )}
                                         </Section>
                                     )}
 
