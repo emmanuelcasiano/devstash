@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getItemTypeIcon, getItemTypeSlug, isProItemType } from "@/lib/constants/item-types";
+import {
+  getItemTypeColor,
+  getItemTypeIcon,
+  getItemTypeSlug,
+  isProItemType,
+} from "@/lib/constants/item-types";
 import { Code } from "lucide-react";
 
 describe("getItemTypeSlug", () => {
@@ -23,5 +28,16 @@ describe("isProItemType", () => {
 describe("getItemTypeIcon", () => {
   it("falls back to the Code icon for an unknown icon name", () => {
     expect(getItemTypeIcon("NotARealIcon")).toBe(Code);
+  });
+});
+
+describe("getItemTypeColor", () => {
+  it("returns the brand color for a system type, case-insensitively", () => {
+    expect(getItemTypeColor("snippet")).toBe("#3b82f6");
+    expect(getItemTypeColor("Link")).toBe("#10b981");
+  });
+
+  it("falls back to gray for an unknown type", () => {
+    expect(getItemTypeColor("whatever")).toBe("#6b7280");
   });
 });

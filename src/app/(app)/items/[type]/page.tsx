@@ -5,8 +5,10 @@ import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/auth";
 import { getItemsByType } from "@/lib/db/items";
+import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validation/item";
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
 import { ItemCard } from "@/components/items/ItemCard";
+import { NewItemDialog } from "@/components/items/NewItemDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,9 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
 
     const { itemType, items } = result;
     const label = toTitleCase(itemType.name);
+    const canCreate = (CREATE_ITEM_TYPES as readonly string[]).includes(
+        itemType.name,
+    );
 
     return (
         <div className="flex flex-col gap-8">
@@ -47,23 +52,35 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
                 Back to dashboard
             </Link>
 
-            <div className="flex items-center gap-3">
-                <div
-                    className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-                    style={{ backgroundColor: `${itemType.color}1a` }}
-                >
-                    <ItemTypeIcon
-                        iconName={itemType.icon}
-                        className="size-5"
-                        color={itemType.color}
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <div
+                        className="flex size-10 shrink-0 items-center justify-center rounded-lg"
+                        style={{ backgroundColor: `${itemType.color}1a` }}
+                    >
+                        <ItemTypeIcon
+                            iconName={itemType.icon}
+                            className="size-5"
+                            color={itemType.color}
+                        />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-foreground">
+                            {label}s
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            {items.length}{" "}
+                            {items.length === 1 ? "item" : "items"}
+                        </p>
+                    </div>
+                </div>
+
+                {canCreate && (
+                    <NewItemDialog
+                        defaultType={itemType.name as CreateItemType}
+                        triggerLabel={`New ${label}`}
                     />
-                </div>
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">{label}s</h1>
-                    <p className="text-sm text-muted-foreground">
-                        {items.length} {items.length === 1 ? "item" : "items"}
-                    </p>
-                </div>
+                )}
             </div>
 
             {items.length === 0 ? (
