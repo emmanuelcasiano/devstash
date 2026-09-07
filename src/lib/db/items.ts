@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/db/current-user";
+import type { UpdateItemInput } from "@/lib/validation/item";
 
 export interface ItemTypeSummary {
     id: string;
@@ -229,4 +230,48 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
             name: link.collection.name,
         })),
     };
+}
+
+/**
+ * Updates the editable fields of one item (title, description, content, url,
+ * language, tags) and returns the refreshed {@link ItemDetail} so the drawer can
+ * re-render without a second fetch.
+ *
+ * Scoped to the current user: an item id that the signed-in user does not own
+ * (or that does not exist) resolves to `null` and nothing is written. Tags are
+ * fully replaced — every existing relation is disconnected and the new list is
+ * connect-or-created.
+ */
+export async function updateItem(
+    id: string,
+    data: UpdateItemInput,
+): Promise<ItemDetail | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const owned = await prisma.item.findFirst({
+        where: { id, userId },
+        select: { id: true },
+    });
+    if (!owned) return null;
+
+    await prisma.item.update({
+        where: { id },
+        data: {
+            title: data.title,
+            description: data.description,
+            content: data.content,
+            url: data.url,
+            language: data.language,
+            tags: {
+                set: [],
+                connectOrCreate: data.tags.map((name) => ({
+                    where: { name },
+                    create: { name },
+                })),
+            },
+        },
+    });
+
+    return getItemById(id);
 }
