@@ -19,6 +19,14 @@ import {
 
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
 import { useItemDrawer } from "@/components/items/item-drawer-provider";
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +39,7 @@ import {
     SheetDescription,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { updateItem } from "@/actions/items";
+import { deleteItem, updateItem } from "@/actions/items";
 import type { ItemDetail } from "@/lib/db/items";
 import { parseTagsInput } from "@/lib/validation/item";
 import { cn, formatFileSize, formatLongDate } from "@/lib/utils";
@@ -96,6 +104,12 @@ export function ItemDrawer() {
     const [formError, setFormError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
+    // Delete confirmation is id-tagged the same way: the dialog only stays open
+    // while the drawer is still showing the item it was opened for.
+    const [deleteForId, setDeleteForId] = useState<string | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
     useEffect(() => {
         if (!openItemId) return;
 
@@ -124,6 +138,7 @@ export function ItemDrawer() {
     const isError = errorId !== null && errorId === openItemId;
     const isLoading = openItemId !== null && item === null && !isError;
     const isEditing = item !== null && editingId === openItemId;
+    const isDeleteOpen = item !== null && deleteForId === openItemId;
 
     const typeName = item?.itemType.name ?? "";
     const showContentField = CONTENT_TYPES.has(typeName);
@@ -192,6 +207,41 @@ export function ItemDrawer() {
         router.refresh();
     }
 
+    function startDelete() {
+        if (!item) return;
+        setDeleteError(null);
+        setDeleteForId(item.id);
+    }
+
+    function cancelDelete() {
+        if (deleting) return;
+        setDeleteForId(null);
+        setDeleteError(null);
+    }
+
+    async function handleDelete() {
+        if (!item || deleting) return;
+
+        setDeleting(true);
+        setDeleteError(null);
+
+        const result = await deleteItem(item.id);
+
+        setDeleting(false);
+
+        if (!result.success) {
+            setDeleteError(result.error);
+            toast.error(result.error);
+            return;
+        }
+
+        setDeleteForId(null);
+        closeItem();
+        setEditingId(null);
+        toast.success("Item deleted.");
+        router.refresh();
+    }
+
     const copyValue = item?.content ?? item?.url ?? item?.description ?? "";
 
     async function handleCopy() {
@@ -214,6 +264,8 @@ export function ItemDrawer() {
                     setCopied(false);
                     setEditingId(null);
                     setFormError(null);
+                    setDeleteForId(null);
+                    setDeleteError(null);
                 }
             }}
         >
@@ -233,6 +285,7 @@ export function ItemDrawer() {
                 )}
 
                 {item && (
+                    <>
                     <div className="flex h-full flex-col">
                         <div className="flex flex-col gap-3 p-6 pb-4">
                             <div className="flex items-start gap-3 pr-8">
@@ -345,6 +398,7 @@ export function ItemDrawer() {
                                         size="icon-sm"
                                         className="text-destructive hover:text-destructive"
                                         aria-label="Delete item"
+                                        onClick={startDelete}
                                     >
                                         <Trash2 className="size-4" />
                                     </Button>
@@ -549,6 +603,55 @@ export function ItemDrawer() {
                             </Section>
                         </div>
                     </div>
+
+                    <AlertDialog
+                        open={isDeleteOpen}
+                        onOpenChange={(open) => {
+                            if (!open) cancelDelete();
+                        }}
+                    >
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this item?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    &ldquo;{item.title}&rdquo; will be permanently
+                                    removed. This can&apos;t be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+
+                            {deleteError && (
+                                <p
+                                    role="alert"
+                                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                                >
+                                    {deleteError}
+                                </p>
+                            )}
+
+                            <AlertDialogFooter>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={cancelDelete}
+                                    disabled={deleting}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                >
+                                    {deleting && (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    )}
+                                    Delete
+                                </Button>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                    </>
                 )}
             </SheetContent>
         </Sheet>

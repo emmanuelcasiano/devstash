@@ -1,18 +1,42 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Item Delete
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add a `deleteItem(itemId)` server action to `src/actions/items.ts` returning the
+  project's `ActionResult<T>` shape (`{ success, data } | { success, error }`):
+  `auth()` guard, ownership-scoped delete, generic message in `catch`.
+- Add a `deleteItem(id)` query to `src/lib/db/items.ts` that resolves the current
+  user, does an ownership `findFirst` (foreign/unknown id → `null`, nothing
+  deleted), then `prisma.item.delete`. The schema's `ItemCollection` join rows
+  cascade on `Item` delete; tag rows are left in place (shared, like edit mode).
+- Wire the item drawer's existing Delete (trash) button: clicking it opens a
+  shadcn `AlertDialog` confirmation ("Delete this item?" / "This can't be undone.")
+  with a destructive Delete button and a Cancel.
+- On confirm: call the action, show a `Loader2` spinner on the dialog's Delete
+  button while it runs, disable both buttons.
+- On success: close the dialog, close the drawer (`closeItem()`), clear any
+  id-tagged drawer state, `toast.success("Item deleted.")`, and `router.refresh()`
+  so the dashboard / items-list cards drop the removed item.
+- On failure: keep the drawer open, show an inline destructive alert in the
+  dialog (reuse the edit-mode `formError` pattern) **and** `toast.error`.
 
 ## Notes
 
-<!-- Any extra notes -->
+- The Delete button already exists in `ItemDrawer.tsx` (view mode action bar,
+  `Trash2`, right-aligned, `text-destructive`) — it is currently presentational.
+- `AlertDialog` (`src/components/ui/alert-dialog.tsx`, base-ui wrapper) and
+  `sonner` toasts are already in the repo from the Profile and Item Drawer Edit
+  features — no new components or packages expected.
+- Follow the id-tagged state pattern already used for `loadedItem` / `editingId`
+  so a delete in flight never acts on the wrong item if the drawer is switched.
+- Tests: cover any new pure/validation logic with Vitest. `deleteItem` (action +
+  query) needs no unit test — consistent with `updateItem` / `getItemById`
+  (Prisma + `auth()`, no mocking harness).
+- No DB migration, no new env vars. Run `npm test` and `npm run build`.
 
 ## History
 
