@@ -16,6 +16,7 @@ import {
 
 import { createItem } from "@/actions/items";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -29,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { isCodeItemType } from "@/lib/code-language";
+import { isMarkdownItemType } from "@/lib/markdown-item";
 import { getItemTypeColor } from "@/lib/constants/item-types";
 import { parseTagsInput, type CreateItemType } from "@/lib/validation/item";
 import { cn } from "@/lib/utils";
@@ -93,9 +95,10 @@ export function NewItemDialog({
     const showContentField = CONTENT_TYPES.has(type);
     const showLanguageField = LANGUAGE_TYPES.has(type);
     const showUrlField = type === "link";
-    // Snippets and commands get the Monaco code editor; prompts and notes keep
-    // the plain textarea.
+    // Snippets and commands get the Monaco code editor; notes and prompts get
+    // the Markdown editor; anything else keeps the plain textarea.
     const isCodeType = isCodeItemType(type);
+    const isMarkdownType = isMarkdownItemType(type);
 
     const canSubmit =
         form.title.trim() !== "" &&
@@ -254,6 +257,16 @@ export function NewItemDialog({
                                     value={form.content}
                                     language={form.language}
                                     typeName={type}
+                                    onValueChange={(value) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            content: value,
+                                        }))
+                                    }
+                                />
+                            ) : isMarkdownType ? (
+                                <MarkdownEditor
+                                    value={form.content}
                                     onValueChange={(value) =>
                                         setForm((prev) => ({
                                             ...prev,
