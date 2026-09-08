@@ -19,6 +19,7 @@ import {
 
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { useItemDrawer } from "@/components/items/item-drawer-provider";
 import {
     AlertDialog,
@@ -43,6 +44,7 @@ import {
 import { deleteItem, updateItem } from "@/actions/items";
 import type { ItemDetail } from "@/lib/db/items";
 import { isCodeItemType } from "@/lib/code-language";
+import { isMarkdownItemType } from "@/lib/markdown-item";
 import { parseTagsInput } from "@/lib/validation/item";
 import { cn, formatFileSize, formatLongDate } from "@/lib/utils";
 
@@ -152,9 +154,10 @@ export function ItemDrawer() {
     const showContentField = CONTENT_TYPES.has(typeName);
     const showLanguageField = LANGUAGE_TYPES.has(typeName);
     const showUrlField = typeName === "link";
-    // Snippets and commands get the Monaco code editor; prompts and notes keep
-    // the plain textarea / <pre>.
+    // Snippets and commands get the Monaco code editor; notes and prompts get
+    // the Markdown editor; anything else keeps the plain textarea / <pre>.
     const isCodeType = isCodeItemType(typeName);
+    const isMarkdownType = isMarkdownItemType(typeName);
 
     function retry() {
         setErrorId(null);
@@ -419,7 +422,7 @@ export function ItemDrawer() {
 
                         <Separator />
 
-                        <div className="flex-1 space-y-6 overflow-y-auto p-6">
+                        <div className="editor-scroll flex-1 space-y-6 overflow-y-auto p-6">
                             {isEditing ? (
                                 <>
                                     {formError && (
@@ -457,6 +460,16 @@ export function ItemDrawer() {
                                                     language={form.language}
                                                     typeName={typeName}
                                                     maxHeight={DRAWER_CODE_MAX_HEIGHT}
+                                                    onValueChange={(value) =>
+                                                        setForm((prev) => ({
+                                                            ...prev,
+                                                            content: value,
+                                                        }))
+                                                    }
+                                                />
+                                            ) : isMarkdownType ? (
+                                                <MarkdownEditor
+                                                    value={form.content}
                                                     onValueChange={(value) =>
                                                         setForm((prev) => ({
                                                             ...prev,
@@ -529,6 +542,11 @@ export function ItemDrawer() {
                                                     language={item.language}
                                                     typeName={typeName}
                                                     maxHeight={DRAWER_CODE_MAX_HEIGHT}
+                                                    readOnly
+                                                />
+                                            ) : isMarkdownType ? (
+                                                <MarkdownEditor
+                                                    value={item.content}
                                                     readOnly
                                                 />
                                             ) : (
