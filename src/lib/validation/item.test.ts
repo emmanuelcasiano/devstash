@@ -113,10 +113,59 @@ describe("createItemSchema", () => {
     it("rejects an unknown type", () => {
         expect(
             createItemSchema.safeParse({
-                type: "file",
+                type: "video",
                 title: "Report",
                 tags: [],
             }).success,
+        ).toBe(false);
+    });
+
+    it("requires upload metadata when the type is file or image", () => {
+        const missing = createItemSchema.safeParse({
+            type: "file",
+            title: "Report",
+            tags: [],
+        });
+        expect(missing.success).toBe(false);
+        if (!missing.success) {
+            expect(
+                missing.error.issues.some((issue) =>
+                    issue.message.includes("Upload a file first"),
+                ),
+            ).toBe(true);
+        }
+
+        const present = createItemSchema.safeParse({
+            type: "image",
+            title: "Screenshot",
+            fileUrl: "https://cdn.example.com/uploads/u/abc/shot.png",
+            fileName: "shot.png",
+            fileSize: 2048,
+            tags: [],
+        });
+        expect(present.success).toBe(true);
+        if (present.success) {
+            expect(present.data.fileUrl).toBe(
+                "https://cdn.example.com/uploads/u/abc/shot.png",
+            );
+            expect(present.data.fileName).toBe("shot.png");
+            expect(present.data.fileSize).toBe(2048);
+        }
+    });
+
+    it("rejects a non-positive or non-integer fileSize", () => {
+        const base = {
+            type: "file" as const,
+            title: "Report",
+            fileUrl: "https://cdn.example.com/uploads/u/abc/report.pdf",
+            fileName: "report.pdf",
+            tags: [],
+        };
+        expect(
+            createItemSchema.safeParse({ ...base, fileSize: 0 }).success,
+        ).toBe(false);
+        expect(
+            createItemSchema.safeParse({ ...base, fileSize: 12.5 }).success,
         ).toBe(false);
     });
 

@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/db/current-user";
-import type { CreateItemInput, UpdateItemInput } from "@/lib/validation/item";
+import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
+import {
+    isFileItemType,
+    type CreateItemInput,
+    type UpdateItemInput,
+} from "@/lib/validation/item";
 
 export interface ItemTypeSummary {
     id: string;
@@ -238,8 +243,11 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
  *
  * The `type` slug is resolved to a system {@link ItemType}; an unknown slug (or
  * no signed-in user) resolves to `null` and nothing is written. `contentType` is
- * derived from the type — `URL` for links, `TEXT` for everything else — and the
- * fields that do not apply to the chosen type are stored as `null`.
+ * derived from the type — `FILE` for file/image, `URL` for links, `TEXT` for
+ * everything else — and the fields that do not apply to the chosen type are
+ * stored as `null`. For file/image types the upload metadata
+ * (`fileUrl`/`fileName`/`fileSize`) has already been produced by
+ * `POST /api/upload`.
  */
 export async function createItem(
     data: CreateItemInput,
@@ -254,15 +262,19 @@ export async function createItem(
     if (!type) return null;
 
     const isLink = data.type === "link";
+    const isFile = isFileItemType(data.type);
 
     const created = await prisma.item.create({
         data: {
             title: data.title,
             description: data.description,
-            content: isLink ? null : data.content,
+            content: isLink || isFile ? null : data.content,
             url: isLink ? data.url : null,
-            language: isLink ? null : data.language,
-            contentType: isLink ? "URL" : "TEXT",
+            language: isLink || isFile ? null : data.language,
+            fileUrl: isFile ? data.fileUrl : null,
+            fileName: isFile ? data.fileName : null,
+            fileSize: isFile ? data.fileSize : null,
+            contentType: isFile ? "FILE" : isLink ? "URL" : "TEXT",
             userId,
             itemTypeId: type.id,
             tags: {
@@ -329,6 +341,10 @@ export async function updateItem(
  * (or that does not exist) resolves to `false` and nothing is deleted. The
  * schema's `ItemCollection` join rows cascade on `Item` delete; `Tag` rows are
  * shared and left in place. Returns `true` when a row was removed.
+ *
+ * When the item was a file/image, its backing R2 object is removed afterwards.
+ * That cleanup is best-effort — a storage error is logged but never fails the
+ * delete, since the database row (the source of truth) is already gone.
  */
 export async function deleteItem(id: string): Promise<boolean> {
     const userId = await getCurrentUserId();
@@ -336,10 +352,25 @@ export async function deleteItem(id: string): Promise<boolean> {
 
     const owned = await prisma.item.findFirst({
         where: { id, userId },
-        select: { id: true },
+        select: { id: true, fileUrl: true },
     });
     if (!owned) return false;
 
     await prisma.item.delete({ where: { id } });
+
+    if (owned.fileUrl) {
+        const key = keyFromPublicUrl(owned.fileUrl);
+        if (key) {
+            try {
+                await deleteFromR2(key);
+            } catch (error) {
+                console.error(
+                    `Failed to delete R2 object for item ${id}:`,
+                    error,
+                );
+            }
+        }
+    }
+
     return true;
 }

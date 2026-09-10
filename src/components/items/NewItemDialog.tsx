@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
     Code,
+    File as FileIcon,
+    Image as ImageIcon,
     Link as LinkIcon,
     Loader2,
     Plus,
@@ -16,6 +18,7 @@ import {
 
 import { createItem } from "@/actions/items";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +35,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { isCodeItemType } from "@/lib/code-language";
 import { isMarkdownItemType } from "@/lib/markdown-item";
 import { getItemTypeColor } from "@/lib/constants/item-types";
-import { parseTagsInput, type CreateItemType } from "@/lib/validation/item";
+import {
+    isFileItemType,
+    parseTagsInput,
+    type CreateItemType,
+} from "@/lib/validation/item";
 import { cn } from "@/lib/utils";
 
 const TYPE_OPTIONS: { value: CreateItemType; label: string; icon: LucideIcon }[] =
@@ -42,6 +49,8 @@ const TYPE_OPTIONS: { value: CreateItemType; label: string; icon: LucideIcon }[]
         { value: "command", label: "Command", icon: Terminal },
         { value: "note", label: "Note", icon: StickyNote },
         { value: "link", label: "Link", icon: LinkIcon },
+        { value: "file", label: "File", icon: FileIcon },
+        { value: "image", label: "Image", icon: ImageIcon },
     ];
 
 /** Types whose content textarea / language input are shown in the form. */
@@ -89,9 +98,11 @@ export function NewItemDialog({
     const [open, setOpen] = useState(false);
     const [type, setType] = useState<CreateItemType>(defaultType);
     const [form, setForm] = useState<NewItemForm>(EMPTY_FORM);
+    const [upload, setUpload] = useState<UploadedFile | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
+    const isFileType = isFileItemType(type);
     const showContentField = CONTENT_TYPES.has(type);
     const showLanguageField = LANGUAGE_TYPES.has(type);
     const showUrlField = type === "link";
@@ -103,6 +114,7 @@ export function NewItemDialog({
     const canSubmit =
         form.title.trim() !== "" &&
         (!showUrlField || form.url.trim() !== "") &&
+        (!isFileType || upload !== null) &&
         !submitting;
 
     function updateField(field: keyof NewItemForm) {
@@ -117,6 +129,7 @@ export function NewItemDialog({
     function resetForm() {
         setType(defaultType);
         setForm(EMPTY_FORM);
+        setUpload(null);
         setError(null);
     }
 
@@ -145,6 +158,9 @@ export function NewItemDialog({
             url: showUrlField ? form.url : null,
             language: showLanguageField ? form.language : null,
             tags: parseTagsInput(form.tags),
+            fileUrl: isFileType ? (upload?.fileUrl ?? null) : null,
+            fileName: isFileType ? (upload?.fileName ?? null) : null,
+            fileSize: isFileType ? (upload?.fileSize ?? null) : null,
         });
 
         setSubmitting(false);
@@ -182,15 +198,15 @@ export function NewItemDialog({
                         New {selectedOption.label.toLowerCase()}
                     </DialogTitle>
                     <DialogDescription>
-                        Add a snippet, prompt, command, note, or link to your
-                        stash.
+                        Add a snippet, prompt, command, note, link, file, or
+                        image to your stash.
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
                         <Label>Type</Label>
-                        <div className="grid grid-cols-5 gap-1.5">
+                        <div className="grid grid-cols-4 gap-1.5">
                             {TYPE_OPTIONS.map((option) => {
                                 const Icon = option.icon;
                                 const active = type === option.value;
@@ -249,6 +265,20 @@ export function NewItemDialog({
                             rows={2}
                         />
                     </Field>
+
+                    {isFileType && (
+                        <Field
+                            label={type === "image" ? "Image" : "File"}
+                            htmlFor="new-item-upload"
+                        >
+                            <FileUpload
+                                kind={type === "image" ? "image" : "file"}
+                                value={upload}
+                                onChange={setUpload}
+                                disabled={submitting}
+                            />
+                        </Field>
+                    )}
 
                     {showContentField && (
                         <Field label="Content" htmlFor="new-item-content">
