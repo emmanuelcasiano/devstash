@@ -8,6 +8,7 @@ import { getItemsByType } from "@/lib/db/items";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validation/item";
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
 import { ItemCard } from "@/components/items/ItemCard";
+import { ImageCard } from "@/components/items/ImageCard";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
 
     const { itemType, items } = result;
     const label = toTitleCase(itemType.name);
+    const isImageGallery = itemType.name === "image";
     const canCreate = (CREATE_ITEM_TYPES as readonly string[]).includes(
         itemType.name,
     );
@@ -87,6 +89,12 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
                 <p className="text-sm text-muted-foreground">
                     No {label.toLowerCase()} items yet.
                 </p>
+            ) : isImageGallery ? (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {items.map((item) => (
+                        <ImageCard key={item.id} item={item} />
+                    ))}
+                </div>
             ) : (
                 <div className="grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {items.map((item) => (
