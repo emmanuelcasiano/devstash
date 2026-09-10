@@ -52,7 +52,8 @@ export type UpdateItemInput = z.infer<typeof updateItemSchema>;
 
 /**
  * The item types that can be created from the "New Item" dialog. File and Image
- * are Pro-only and handled elsewhere, so they are not offered here.
+ * take an uploaded file instead of text content; the dialog swaps in the
+ * `FileUpload` control for them.
  */
 export const CREATE_ITEM_TYPES = [
     "snippet",
@@ -60,9 +61,26 @@ export const CREATE_ITEM_TYPES = [
     "command",
     "note",
     "link",
+    "file",
+    "image",
 ] as const;
 
 export type CreateItemType = (typeof CREATE_ITEM_TYPES)[number];
+
+/** Types whose content is an uploaded object in R2 rather than text or a URL. */
+export const FILE_ITEM_TYPES = ["file", "image"] as const;
+
+export function isFileItemType(type: string): boolean {
+    return (FILE_ITEM_TYPES as readonly string[]).includes(type);
+}
+
+/** A non-negative integer byte count, or `null` when absent. */
+const optionalFileSize = z
+    .number()
+    .int()
+    .positive()
+    .nullish()
+    .transform((value) => value ?? null);
 
 export const createItemSchema = z
     .object({
@@ -75,11 +93,25 @@ export const createItemSchema = z
         url: optionalUrl,
         language: optionalText,
         tags: tagList,
+        fileUrl: optionalUrl,
+        fileName: optionalText,
+        fileSize: optionalFileSize,
     })
     .refine((data) => data.type !== "link" || data.url !== null, {
         message: "URL is required for links.",
         path: ["url"],
-    });
+    })
+    .refine(
+        (data) =>
+            !isFileItemType(data.type) ||
+            (data.fileUrl !== null &&
+                data.fileName !== null &&
+                data.fileSize !== null),
+        {
+            message: "Upload a file first.",
+            path: ["fileUrl"],
+        },
+    );
 
 /** The normalized payload after {@link createItemSchema} has parsed the input. */
 export type CreateItemInput = z.infer<typeof createItemSchema>;

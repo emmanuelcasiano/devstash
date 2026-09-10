@@ -8,6 +8,8 @@ import {
     Calendar,
     Check,
     Copy,
+    Download,
+    File as FileIcon,
     FolderClosed,
     Loader2,
     Pencil,
@@ -30,7 +32,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -256,7 +258,8 @@ export function ItemDrawer() {
         router.refresh();
     }
 
-    const copyValue = item?.content ?? item?.url ?? item?.description ?? "";
+    const copyValue =
+        item?.content ?? item?.url ?? item?.fileUrl ?? item?.description ?? "";
 
     async function handleCopy() {
         if (!copyValue) return;
@@ -570,28 +573,74 @@ export function ItemDrawer() {
                                         </Section>
                                     )}
 
-                                    {item.fileName && (
-                                        <Section label="File">
-                                            <p className="text-sm text-foreground">
-                                                {item.fileUrl ? (
-                                                    <a
-                                                        href={item.fileUrl}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="text-primary hover:underline"
-                                                    >
-                                                        {item.fileName}
-                                                    </a>
+                                    {item.fileUrl && (
+                                        <Section
+                                            label={
+                                                typeName === "image"
+                                                    ? "Image"
+                                                    : "File"
+                                            }
+                                        >
+                                            <div className="flex flex-col gap-3">
+                                                {typeName === "image" ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img
+                                                        src={item.fileUrl}
+                                                        alt={
+                                                            item.fileName ??
+                                                            item.title
+                                                        }
+                                                        className="max-h-80 w-full rounded-lg border border-border object-contain"
+                                                    />
                                                 ) : (
-                                                    item.fileName
+                                                    <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                                                        <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+                                                            <FileIcon className="size-5 text-muted-foreground" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-sm font-medium text-foreground">
+                                                                {item.fileName ??
+                                                                    "Download"}
+                                                            </p>
+                                                            {item.fileSize !=
+                                                                null && (
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {formatFileSize(
+                                                                        item.fileSize,
+                                                                    )}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 )}
-                                                {item.fileSize != null && (
-                                                    <span className="text-muted-foreground">
-                                                        {" "}
-                                                        · {formatFileSize(item.fileSize)}
-                                                    </span>
-                                                )}
-                                            </p>
+
+                                                <div className="flex items-center gap-3">
+                                                    <a
+                                                        href={`/api/items/${item.id}/download`}
+                                                        className={buttonVariants(
+                                                            {
+                                                                variant:
+                                                                    "outline",
+                                                                size: "sm",
+                                                            },
+                                                        )}
+                                                    >
+                                                        <Download className="size-4" />
+                                                        Download
+                                                    </a>
+                                                    {typeName === "image" &&
+                                                        item.fileSize != null && (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {item.fileName
+                                                                    ? `${item.fileName} · `
+                                                                    : ""}
+                                                                {formatFileSize(
+                                                                    item.fileSize,
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                </div>
+                                            </div>
                                         </Section>
                                     )}
 

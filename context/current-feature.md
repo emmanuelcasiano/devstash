@@ -1,18 +1,32 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: File & Image Upload with Cloudflare R2
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add an upload API route that stores files in Cloudflare R2 (scoped to the current user).
+- Keep all Prisma/DB access in `src/lib/db/items.ts`.
+- Build a `FileUpload` component with drag-and-drop and an upload progress indicator.
+- Update the create-item modal (`NewItemDialog`) to use `FileUpload` for the `file` and `image` types.
+- Delete the corresponding R2 object when a file/image item is deleted.
+- Add a download proxy API route (server streams the R2 object to avoid CORS issues).
+- Add a Download button in `ItemDrawer` for file types.
+- In `ItemDrawer`, render an image preview for image items and file info (name + size) for file items.
 
 ## Notes
 
-<!-- Any extra notes -->
+- File/Image are Pro-only item types (`PRO_ITEM_TYPES`), currently ungated in development. `CREATE_ITEM_TYPES` presently excludes `file`/`image`, so it will need to include them for these types to be creatable.
+- Constraints:
+  - Images — max 5 MB; extensions `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`; MIME `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml`.
+  - Files — max 10 MB; extensions `.pdf`, `.txt`, `.md`, `.json`, `.yaml`, `.yml`, `.xml`, `.csv`, `.toml`, `.ini`; MIME `application/pdf`, `text/plain`, `text/markdown`, `application/json`, `application/x-yaml`/`text/yaml`, `application/xml`/`text/xml`, `text/csv`, `application/toml` (`.ini` → `text/plain`).
+- `Item` already has `fileUrl` / `fileName` / `fileSize` columns and `contentType = FILE` from the initial schema — no DB migration expected.
+- New Cloudflare R2 env vars / bucket config will be needed (account id, access key id, secret access key, bucket name, and likely a public or proxied base URL). Spec calls for S3-compatible access.
+- Upload with progress tracking is one of the documented reasons to use an API route rather than a Server Action (see `context/coding-standards.md`).
+- Validate inputs with Zod; keep pure validation logic in a testable module (pattern from `src/lib/validation/item.ts`).
+- Follow the standard workflow: branch `feature/file-image-upload`, implement, test (`npm test` + `npm run build`), verify in browser, then commit/merge on the user's go-ahead.
+- Spec: `context/features/file-image-spec.md`.
 
 ## History
 
