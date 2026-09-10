@@ -1,175 +1,59 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-    Calendar,
-    Check,
-    Copy,
-    Download,
-    File as FileIcon,
-    FolderClosed,
-    Loader2,
-    Pencil,
-    Pin,
-    Star,
-    Tag,
-    Trash2,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
-import { CodeEditor } from "@/components/items/CodeEditor";
-import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { ItemActionBar } from "@/components/items/ItemActionBar";
+import { ItemDetailView, ItemMetaSections } from "@/components/items/ItemDetailView";
+import { ItemEditFields } from "@/components/items/ItemEditFields";
+import { DeleteItemDialog } from "@/components/items/DeleteItemDialog";
 import { useItemDrawer } from "@/components/items/item-drawer-provider";
 import {
-    AlertDialog,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+    toPayload,
+    useItemDetail,
+} from "@/components/items/use-item-detail";
+import { EMPTY_ITEM_FORM, type ItemFormValues } from "@/components/items/item-form";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import {
     Sheet,
     SheetContent,
     SheetDescription,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { deleteItem, updateItem } from "@/actions/items";
-import type { ItemDetail } from "@/lib/db/items";
-import { isCodeItemType } from "@/lib/code-language";
-import { isMarkdownItemType } from "@/lib/markdown-item";
-import { parseTagsInput } from "@/lib/validation/item";
-import { capitalize, cn, formatFileSize, formatLongDate } from "@/lib/utils";
-
-/** Item detail as it arrives over JSON — the `Date` fields are ISO strings. */
-type ItemDetailPayload = Omit<ItemDetail, "createdAt" | "updatedAt"> & {
-    createdAt: string;
-    updatedAt: string;
-};
-
-/** Item types whose content textarea / language input are shown in edit mode. */
-const CONTENT_TYPES = new Set(["snippet", "prompt", "command", "note"]);
-const LANGUAGE_TYPES = new Set(["snippet", "command"]);
-
-/**
- * The drawer body scrolls, so let the code editor grow tall enough to show
- * almost any snippet in full before it falls back to its own scrollbar.
- */
-const DRAWER_CODE_MAX_HEIGHT = 1200;
-
-interface EditForm {
-    title: string;
-    description: string;
-    content: string;
-    url: string;
-    language: string;
-    tags: string;
-}
-
-const EMPTY_FORM: EditForm = {
-    title: "",
-    description: "",
-    content: "",
-    url: "",
-    language: "",
-    tags: "",
-};
-
-/** The server action returns `Date` objects; the drawer state holds ISO strings. */
-function toPayload(detail: ItemDetail): ItemDetailPayload {
-    return {
-        ...detail,
-        createdAt: new Date(detail.createdAt).toISOString(),
-        updatedAt: new Date(detail.updatedAt).toISOString(),
-    };
-}
+import { updateItem } from "@/actions/items";
+import { makeFieldUpdater } from "@/lib/forms";
+import {
+    isContentItemType,
+    isLanguageItemType,
+    parseTagsInput,
+} from "@/lib/validation/item";
+import { capitalize } from "@/lib/utils";
 
 export function ItemDrawer() {
     const { openItemId, closeItem } = useItemDrawer();
     const router = useRouter();
 
-    // `item` / `errorId` are tagged with the id they belong to, so switching
-    // items never flashes the previous item's content: anything that does not
-    // match `openItemId` reads as "still loading".
-    const [loadedItem, setLoadedItem] = useState<ItemDetailPayload | null>(null);
-    const [errorId, setErrorId] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
-    const [reloadKey, setReloadKey] = useState(0);
+    const { item, isLoading, isError, retry, setItem } =
+        useItemDetail(openItemId);
 
-    // Edit mode is likewise id-tagged: it only applies while the drawer is still
-    // showing the item that was open when Edit was clicked.
+    // Edit mode and the delete dialog are id-tagged: they only apply while the
+    // drawer is still showing the item that was open when they were triggered.
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [form, setForm] = useState<EditForm>(EMPTY_FORM);
+    const [deleteForId, setDeleteForId] = useState<string | null>(null);
+
+    const [form, setForm] = useState<ItemFormValues>(EMPTY_ITEM_FORM);
     const [formError, setFormError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const updateField = makeFieldUpdater(setForm);
 
-    // Delete confirmation is id-tagged the same way: the dialog only stays open
-    // while the drawer is still showing the item it was opened for.
-    const [deleteForId, setDeleteForId] = useState<string | null>(null);
-    const [deleteError, setDeleteError] = useState<string | null>(null);
-    const [deleting, setDeleting] = useState(false);
-
-    useEffect(() => {
-        if (!openItemId) return;
-
-        const controller = new AbortController();
-
-        fetch(`/api/items/${openItemId}`, { signal: controller.signal })
-            .then(async (res) => {
-                if (!res.ok) throw new Error(`Request failed with ${res.status}`);
-                return (await res.json()) as { item: ItemDetailPayload };
-            })
-            .then((data) => {
-                setLoadedItem(data.item);
-                setCopied(false);
-            })
-            .catch((error: unknown) => {
-                if (controller.signal.aborted) return;
-                console.error("Failed to load item detail:", error);
-                setErrorId(openItemId);
-            });
-
-        return () => controller.abort();
-    }, [openItemId, reloadKey]);
-
-    const item =
-        loadedItem && loadedItem.id === openItemId ? loadedItem : null;
-    const isError = errorId !== null && errorId === openItemId;
-    const isLoading = openItemId !== null && item === null && !isError;
     const isEditing = item !== null && editingId === openItemId;
     const isDeleteOpen = item !== null && deleteForId === openItemId;
-
     const typeName = item?.itemType.name ?? "";
-    const showContentField = CONTENT_TYPES.has(typeName);
-    const showLanguageField = LANGUAGE_TYPES.has(typeName);
-    const showUrlField = typeName === "link";
-    // Snippets and commands get the Monaco code editor; notes and prompts get
-    // the Markdown editor; anything else keeps the plain textarea / <pre>.
-    const isCodeType = isCodeItemType(typeName);
-    const isMarkdownType = isMarkdownItemType(typeName);
-
-    function retry() {
-        setErrorId(null);
-        setReloadKey((key) => key + 1);
-    }
-
-    function updateField(field: keyof EditForm) {
-        return (
-            event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-        ) => {
-            const { value } = event.target;
-            setForm((prev) => ({ ...prev, [field]: value }));
-        };
-    }
 
     function startEdit() {
         if (!item) return;
@@ -199,9 +83,9 @@ export function ItemDrawer() {
         const result = await updateItem(item.id, {
             title: form.title,
             description: form.description,
-            content: showContentField ? form.content : null,
-            url: showUrlField ? form.url : null,
-            language: showLanguageField ? form.language : null,
+            content: isContentItemType(typeName) ? form.content : null,
+            url: typeName === "link" ? form.url : null,
+            language: isLanguageItemType(typeName) ? form.language : null,
             tags: parseTagsInput(form.tags),
         });
 
@@ -213,75 +97,22 @@ export function ItemDrawer() {
             return;
         }
 
-        setLoadedItem(toPayload(result.data));
+        setItem(toPayload(result.data));
         setEditingId(null);
         toast.success("Item updated.");
         router.refresh();
     }
 
-    function startDelete() {
-        if (!item) return;
-        setDeleteError(null);
-        setDeleteForId(item.id);
-    }
-
-    function cancelDelete() {
-        if (deleting) return;
-        setDeleteForId(null);
-        setDeleteError(null);
-    }
-
-    async function handleDelete() {
-        if (!item || deleting) return;
-
-        setDeleting(true);
-        setDeleteError(null);
-
-        const result = await deleteItem(item.id);
-
-        setDeleting(false);
-
-        if (!result.success) {
-            setDeleteError(result.error);
-            toast.error(result.error);
-            return;
-        }
-
-        setDeleteForId(null);
+    function handleSheetOpenChange(open: boolean) {
+        if (open) return;
         closeItem();
         setEditingId(null);
-        toast.success("Item deleted.");
-        router.refresh();
-    }
-
-    const copyValue =
-        item?.content ?? item?.url ?? item?.fileUrl ?? item?.description ?? "";
-
-    async function handleCopy() {
-        if (!copyValue) return;
-        try {
-            await navigator.clipboard.writeText(copyValue);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
-        } catch (error) {
-            console.error("Failed to copy item:", error);
-        }
+        setFormError(null);
+        setDeleteForId(null);
     }
 
     return (
-        <Sheet
-            open={openItemId !== null}
-            onOpenChange={(open) => {
-                if (!open) {
-                    closeItem();
-                    setCopied(false);
-                    setEditingId(null);
-                    setFormError(null);
-                    setDeleteForId(null);
-                    setDeleteError(null);
-                }
-            }}
-        >
+        <Sheet open={openItemId !== null} onOpenChange={handleSheetOpenChange}>
             <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-md">
                 {isLoading && <DrawerSkeleton />}
 
@@ -299,498 +130,131 @@ export function ItemDrawer() {
 
                 {item && (
                     <>
-                    <div className="flex h-full flex-col">
-                        <div className="flex flex-col gap-3 p-6 pb-4">
-                            <div className="flex items-start gap-3 pr-8">
-                                <div
-                                    className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-                                    style={{ backgroundColor: `${item.itemType.color}1a` }}
-                                >
-                                    <ItemTypeIcon
-                                        iconName={item.itemType.icon}
-                                        className="size-5"
-                                        color={item.itemType.color}
-                                    />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    {isEditing ? (
-                                        <>
-                                            <SheetTitle className="sr-only">
-                                                Editing {item.title}
+                        <div className="flex h-full flex-col">
+                            <div className="flex flex-col gap-3 p-6 pb-4">
+                                <div className="flex items-start gap-3 pr-8">
+                                    <div
+                                        className="flex size-10 shrink-0 items-center justify-center rounded-lg"
+                                        style={{
+                                            backgroundColor: `${item.itemType.color}1a`,
+                                        }}
+                                    >
+                                        <ItemTypeIcon
+                                            iconName={item.itemType.icon}
+                                            className="size-5"
+                                            color={item.itemType.color}
+                                        />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        {isEditing ? (
+                                            <>
+                                                <SheetTitle className="sr-only">
+                                                    Editing {item.title}
+                                                </SheetTitle>
+                                                <p className="text-sm font-medium text-muted-foreground">
+                                                    Editing
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <SheetTitle className="truncate text-base">
+                                                {item.title}
                                             </SheetTitle>
-                                            <p className="text-sm font-medium text-muted-foreground">
-                                                Editing
-                                            </p>
-                                        </>
-                                    ) : (
-                                        <SheetTitle className="truncate text-base">
-                                            {item.title}
-                                        </SheetTitle>
-                                    )}
-                                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                        <Badge variant="secondary">
-                                            {capitalize(item.itemType.name)}s
-                                        </Badge>
-                                        {!isEditing && item.language && (
-                                            <Badge variant="secondary">{item.language}</Badge>
                                         )}
+                                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                            <Badge variant="secondary">
+                                                {capitalize(item.itemType.name)}s
+                                            </Badge>
+                                            {!isEditing && item.language && (
+                                                <Badge variant="secondary">
+                                                    {item.language}
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <SheetDescription className="sr-only">
-                                Detail view for {item.title}
-                            </SheetDescription>
+                                <SheetDescription className="sr-only">
+                                    Detail view for {item.title}
+                                </SheetDescription>
 
-                            {isEditing ? (
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        size="sm"
-                                        onClick={handleSave}
-                                        disabled={saving || form.title.trim() === ""}
-                                    >
-                                        {saving && (
-                                            <Loader2 className="size-4 animate-spin" />
-                                        )}
-                                        Save
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={cancelEdit}
-                                        disabled={saving}
-                                    >
-                                        Cancel
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-0.5">
-                                    <Button variant="ghost" size="sm">
-                                        <Star
-                                            className={cn(
-                                                "size-4",
-                                                item.isFavorite &&
-                                                    "fill-yellow-400 text-yellow-400",
-                                            )}
-                                        />
-                                        Favorite
-                                    </Button>
-                                    <Button variant="ghost" size="sm">
-                                        <Pin
-                                            className={cn(
-                                                "size-4",
-                                                item.isPinned && "fill-current",
-                                            )}
-                                        />
-                                        Pin
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={handleCopy}
-                                        disabled={!copyValue}
-                                    >
-                                        {copied ? (
-                                            <Check className="size-4" />
-                                        ) : (
-                                            <Copy className="size-4" />
-                                        )}
-                                        {copied ? "Copied" : "Copy"}
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="ml-auto"
-                                        onClick={startEdit}
-                                    >
-                                        <Pencil className="size-4" />
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon-sm"
-                                        className="text-destructive hover:text-destructive"
-                                        aria-label="Delete item"
-                                        onClick={startDelete}
-                                    >
-                                        <Trash2 className="size-4" />
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-
-                        <Separator />
-
-                        <div className="editor-scroll flex-1 space-y-6 overflow-y-auto p-6">
-                            {isEditing ? (
-                                <>
-                                    {formError && (
-                                        <p
-                                            role="alert"
-                                            className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                                        >
-                                            {formError}
-                                        </p>
-                                    )}
-
-                                    <Field label="Title" htmlFor="item-title">
-                                        <Input
-                                            id="item-title"
-                                            value={form.title}
-                                            onChange={updateField("title")}
-                                            required
-                                        />
-                                    </Field>
-
-                                    <Field label="Description" htmlFor="item-description">
-                                        <Textarea
-                                            id="item-description"
-                                            value={form.description}
-                                            onChange={updateField("description")}
-                                            rows={2}
-                                        />
-                                    </Field>
-
-                                    {showContentField && (
-                                        <Field label="Content" htmlFor="item-content">
-                                            {isCodeType ? (
-                                                <CodeEditor
-                                                    value={form.content}
-                                                    language={form.language}
-                                                    typeName={typeName}
-                                                    maxHeight={DRAWER_CODE_MAX_HEIGHT}
-                                                    onValueChange={(value) =>
-                                                        setForm((prev) => ({
-                                                            ...prev,
-                                                            content: value,
-                                                        }))
-                                                    }
-                                                />
-                                            ) : isMarkdownType ? (
-                                                <MarkdownEditor
-                                                    value={form.content}
-                                                    onValueChange={(value) =>
-                                                        setForm((prev) => ({
-                                                            ...prev,
-                                                            content: value,
-                                                        }))
-                                                    }
-                                                />
-                                            ) : (
-                                                <Textarea
-                                                    id="item-content"
-                                                    value={form.content}
-                                                    onChange={updateField("content")}
-                                                    rows={8}
-                                                    className="font-mono text-xs leading-relaxed md:text-xs"
-                                                />
-                                            )}
-                                        </Field>
-                                    )}
-
-                                    {showLanguageField && (
-                                        <Field label="Language" htmlFor="item-language">
-                                            <Input
-                                                id="item-language"
-                                                value={form.language}
-                                                onChange={updateField("language")}
-                                                placeholder="typescript"
-                                            />
-                                        </Field>
-                                    )}
-
-                                    {showUrlField && (
-                                        <Field label="URL" htmlFor="item-url">
-                                            <Input
-                                                id="item-url"
-                                                type="url"
-                                                value={form.url}
-                                                onChange={updateField("url")}
-                                                placeholder="https://example.com"
-                                            />
-                                        </Field>
-                                    )}
-
-                                    <Field label="Tags" htmlFor="item-tags">
-                                        <Input
-                                            id="item-tags"
-                                            value={form.tags}
-                                            onChange={updateField("tags")}
-                                            placeholder="react, hooks, patterns"
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Separate tags with commas.
-                                        </p>
-                                    </Field>
-                                </>
-                            ) : (
-                                <>
-                                    {item.description && (
-                                        <Section label="Description">
-                                            <p className="text-sm text-foreground">
-                                                {item.description}
-                                            </p>
-                                        </Section>
-                                    )}
-
-                                    {item.content && (
-                                        <Section label="Content">
-                                            {isCodeType ? (
-                                                <CodeEditor
-                                                    value={item.content}
-                                                    language={item.language}
-                                                    typeName={typeName}
-                                                    maxHeight={DRAWER_CODE_MAX_HEIGHT}
-                                                    readOnly
-                                                />
-                                            ) : isMarkdownType ? (
-                                                <MarkdownEditor
-                                                    value={item.content}
-                                                    readOnly
-                                                />
-                                            ) : (
-                                                <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs text-foreground">
-                                                    {item.content}
-                                                </pre>
-                                            )}
-                                        </Section>
-                                    )}
-
-                                    {item.url && (
-                                        <Section label="Link">
-                                            <a
-                                                href={item.url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-sm break-all text-primary hover:underline"
-                                            >
-                                                {item.url}
-                                            </a>
-                                        </Section>
-                                    )}
-
-                                    {item.fileUrl && (
-                                        <Section
-                                            label={
-                                                typeName === "image"
-                                                    ? "Image"
-                                                    : "File"
+                                {isEditing ? (
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            onClick={handleSave}
+                                            disabled={
+                                                saving || form.title.trim() === ""
                                             }
                                         >
-                                            <div className="flex flex-col gap-3">
-                                                {typeName === "image" ? (
-                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                    <img
-                                                        src={item.fileUrl}
-                                                        alt={
-                                                            item.fileName ??
-                                                            item.title
-                                                        }
-                                                        className="max-h-80 w-full rounded-lg border border-border object-contain"
-                                                    />
-                                                ) : (
-                                                    <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
-                                                        <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-background">
-                                                            <FileIcon className="size-5 text-muted-foreground" />
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-sm font-medium text-foreground">
-                                                                {item.fileName ??
-                                                                    "Download"}
-                                                            </p>
-                                                            {item.fileSize !=
-                                                                null && (
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    {formatFileSize(
-                                                                        item.fileSize,
-                                                                    )}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <div className="flex items-center gap-3">
-                                                    <a
-                                                        href={`/api/items/${item.id}/download`}
-                                                        className={buttonVariants(
-                                                            {
-                                                                variant:
-                                                                    "outline",
-                                                                size: "sm",
-                                                            },
-                                                        )}
-                                                    >
-                                                        <Download className="size-4" />
-                                                        Download
-                                                    </a>
-                                                    {typeName === "image" &&
-                                                        item.fileSize != null && (
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {item.fileName
-                                                                    ? `${item.fileName} · `
-                                                                    : ""}
-                                                                {formatFileSize(
-                                                                    item.fileSize,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                </div>
-                                            </div>
-                                        </Section>
-                                    )}
-
-                                    {item.tags.length > 0 && (
-                                        <Section
-                                            label="Tags"
-                                            icon={<Tag className="size-3.5" />}
+                                            {saving && (
+                                                <Loader2 className="size-4 animate-spin" />
+                                            )}
+                                            Save
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={cancelEdit}
+                                            disabled={saving}
                                         >
-                                            <div className="flex flex-wrap gap-1">
-                                                {item.tags.map((tag) => (
-                                                    <Badge key={tag} variant="secondary">
-                                                        {tag}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        </Section>
-                                    )}
-                                </>
-                            )}
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <ItemActionBar
+                                        key={item.id}
+                                        item={item}
+                                        onEdit={startEdit}
+                                        onDelete={() => setDeleteForId(item.id)}
+                                    />
+                                )}
+                            </div>
 
-                            {item.collections.length > 0 && (
-                                <Section
-                                    label="Collections"
-                                    icon={<FolderClosed className="size-3.5" />}
-                                >
-                                    <div className="flex flex-wrap gap-1">
-                                        {item.collections.map((collection) => (
-                                            <Link
-                                                key={collection.id}
-                                                href={`/collections/${collection.id}`}
-                                                onClick={closeItem}
-                                            >
-                                                <Badge
-                                                    variant="secondary"
-                                                    className="hover:bg-secondary/60"
-                                                >
-                                                    {collection.name}
-                                                </Badge>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </Section>
-                            )}
+                            <Separator />
 
-                            <Section
-                                label="Details"
-                                icon={<Calendar className="size-3.5" />}
-                            >
-                                <dl className="flex flex-col gap-1.5 text-sm">
-                                    <div className="flex justify-between gap-4">
-                                        <dt className="text-muted-foreground">Created</dt>
-                                        <dd className="text-foreground">
-                                            {formatLongDate(new Date(item.createdAt))}
-                                        </dd>
-                                    </div>
-                                    <div className="flex justify-between gap-4">
-                                        <dt className="text-muted-foreground">Updated</dt>
-                                        <dd className="text-foreground">
-                                            {formatLongDate(new Date(item.updatedAt))}
-                                        </dd>
-                                    </div>
-                                </dl>
-                            </Section>
+                            <div className="editor-scroll flex-1 space-y-6 overflow-y-auto p-6">
+                                {isEditing ? (
+                                    <ItemEditFields
+                                        typeName={typeName}
+                                        form={form}
+                                        formError={formError}
+                                        updateField={updateField}
+                                        onContentChange={(value) =>
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                content: value,
+                                            }))
+                                        }
+                                    />
+                                ) : (
+                                    <ItemDetailView item={item} />
+                                )}
+
+                                <ItemMetaSections
+                                    item={item}
+                                    onNavigate={closeItem}
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    <AlertDialog
-                        open={isDeleteOpen}
-                        onOpenChange={(open) => {
-                            if (!open) cancelDelete();
-                        }}
-                    >
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Delete this item?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    &ldquo;{item.title}&rdquo; will be permanently
-                                    removed. This can&apos;t be undone.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-
-                            {deleteError && (
-                                <p
-                                    role="alert"
-                                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                                >
-                                    {deleteError}
-                                </p>
-                            )}
-
-                            <AlertDialogFooter>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={cancelDelete}
-                                    disabled={deleting}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={handleDelete}
-                                    disabled={deleting}
-                                >
-                                    {deleting && (
-                                        <Loader2 className="size-4 animate-spin" />
-                                    )}
-                                    Delete
-                                </Button>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                        <DeleteItemDialog
+                            open={isDeleteOpen}
+                            onOpenChange={(open) => {
+                                if (!open) setDeleteForId(null);
+                            }}
+                            itemId={item.id}
+                            title={item.title}
+                            onDeleted={() => {
+                                setDeleteForId(null);
+                                closeItem();
+                                setEditingId(null);
+                                router.refresh();
+                            }}
+                        />
                     </>
                 )}
             </SheetContent>
         </Sheet>
-    );
-}
-
-function Field({
-    label,
-    htmlFor,
-    children,
-}: {
-    label: string;
-    htmlFor: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <div className="flex flex-col gap-1.5">
-            <Label htmlFor={htmlFor}>{label}</Label>
-            {children}
-        </div>
-    );
-}
-
-function Section({
-    label,
-    icon,
-    children,
-}: {
-    label: string;
-    icon?: React.ReactNode;
-    children: React.ReactNode;
-}) {
-    return (
-        <section className="flex flex-col gap-2">
-            <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                {icon}
-                {label}
-            </h3>
-            {children}
-        </section>
     );
 }
 

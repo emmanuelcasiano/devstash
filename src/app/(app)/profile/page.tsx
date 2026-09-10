@@ -10,6 +10,7 @@ import { getCollectionStats } from "@/lib/db/collections";
 import { getItemTypeIcon } from "@/lib/constants/item-types";
 import { formatLongDate } from "@/lib/utils";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { StatTile } from "@/components/shared/StatTile";
 import { ProfileAccountActions } from "@/components/profile/ProfileAccountActions";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -67,45 +68,18 @@ export default async function ProfilePage() {
                 <h2 className="text-sm font-medium text-muted-foreground">Usage</h2>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <Card>
-                        <CardContent className="flex items-center gap-3">
-                            <div
-                                className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-                                style={{ backgroundColor: "#3b82f61a" }}
-                            >
-                                <Package className="size-5" style={{ color: "#3b82f6" }} />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-2xl font-semibold text-foreground">
-                                    {itemStats.totalItems}
-                                </p>
-                                <p className="truncate text-xs text-muted-foreground">
-                                    Total Items
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="flex items-center gap-3">
-                            <div
-                                className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-                                style={{ backgroundColor: "#8b5cf61a" }}
-                            >
-                                <FolderKanban
-                                    className="size-5"
-                                    style={{ color: "#8b5cf6" }}
-                                />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-2xl font-semibold text-foreground">
-                                    {collectionStats.totalCollections}
-                                </p>
-                                <p className="truncate text-xs text-muted-foreground">
-                                    Collections
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <StatTile
+                        icon={Package}
+                        color="#3b82f6"
+                        value={itemStats.totalItems}
+                        label="Total Items"
+                    />
+                    <StatTile
+                        icon={FolderKanban}
+                        color="#8b5cf6"
+                        value={collectionStats.totalCollections}
+                        label="Collections"
+                    />
                 </div>
 
                 <Card>

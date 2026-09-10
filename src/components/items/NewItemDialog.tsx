@@ -17,9 +17,12 @@ import {
 } from "lucide-react";
 
 import { createItem } from "@/actions/items";
-import { CodeEditor } from "@/components/items/CodeEditor";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
-import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { ItemContentField } from "@/components/items/ItemContentField";
+import {
+    EMPTY_ITEM_FORM,
+    type ItemFormValues,
+} from "@/components/items/item-form";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -29,13 +32,16 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { FormError } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { isCodeItemType } from "@/lib/code-language";
-import { isMarkdownItemType } from "@/lib/markdown-item";
 import { getItemTypeColor } from "@/lib/constants/item-types";
+import { makeFieldUpdater } from "@/lib/forms";
 import {
+    isContentItemType,
+    isLanguageItemType,
     isFileItemType,
     parseTagsInput,
     type CreateItemType,
@@ -52,33 +58,6 @@ const TYPE_OPTIONS: { value: CreateItemType; label: string; icon: LucideIcon }[]
         { value: "file", label: "File", icon: FileIcon },
         { value: "image", label: "Image", icon: ImageIcon },
     ];
-
-/** Types whose content textarea / language input are shown in the form. */
-const CONTENT_TYPES = new Set<CreateItemType>([
-    "snippet",
-    "prompt",
-    "command",
-    "note",
-]);
-const LANGUAGE_TYPES = new Set<CreateItemType>(["snippet", "command"]);
-
-interface NewItemForm {
-    title: string;
-    description: string;
-    content: string;
-    url: string;
-    language: string;
-    tags: string;
-}
-
-const EMPTY_FORM: NewItemForm = {
-    title: "",
-    description: "",
-    content: "",
-    url: "",
-    language: "",
-    tags: "",
-};
 
 const DEFAULT_TYPE: CreateItemType = "snippet";
 
@@ -97,19 +76,16 @@ export function NewItemDialog({
 
     const [open, setOpen] = useState(false);
     const [type, setType] = useState<CreateItemType>(defaultType);
-    const [form, setForm] = useState<NewItemForm>(EMPTY_FORM);
+    const [form, setForm] = useState<ItemFormValues>(EMPTY_ITEM_FORM);
     const [upload, setUpload] = useState<UploadedFile | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const updateField = makeFieldUpdater(setForm);
 
     const isFileType = isFileItemType(type);
-    const showContentField = CONTENT_TYPES.has(type);
-    const showLanguageField = LANGUAGE_TYPES.has(type);
+    const showContentField = isContentItemType(type);
+    const showLanguageField = isLanguageItemType(type);
     const showUrlField = type === "link";
-    // Snippets and commands get the Monaco code editor; notes and prompts get
-    // the Markdown editor; anything else keeps the plain textarea.
-    const isCodeType = isCodeItemType(type);
-    const isMarkdownType = isMarkdownItemType(type);
 
     const canSubmit =
         form.title.trim() !== "" &&
@@ -117,18 +93,9 @@ export function NewItemDialog({
         (!isFileType || upload !== null) &&
         !submitting;
 
-    function updateField(field: keyof NewItemForm) {
-        return (
-            event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-        ) => {
-            const { value } = event.target;
-            setForm((prev) => ({ ...prev, [field]: value }));
-        };
-    }
-
     function resetForm() {
         setType(defaultType);
-        setForm(EMPTY_FORM);
+        setForm(EMPTY_ITEM_FORM);
         setUpload(null);
         setError(null);
     }
@@ -238,14 +205,7 @@ export function NewItemDialog({
                         </div>
                     </div>
 
-                    {error && (
-                        <p
-                            role="alert"
-                            className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                        >
-                            {error}
-                        </p>
-                    )}
+                    {error && <FormError>{error}</FormError>}
 
                     <Field label="Title" htmlFor="new-item-title">
                         <Input
@@ -282,37 +242,19 @@ export function NewItemDialog({
 
                     {showContentField && (
                         <Field label="Content" htmlFor="new-item-content">
-                            {isCodeType ? (
-                                <CodeEditor
-                                    value={form.content}
-                                    language={form.language}
-                                    typeName={type}
-                                    onValueChange={(value) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            content: value,
-                                        }))
-                                    }
-                                />
-                            ) : isMarkdownType ? (
-                                <MarkdownEditor
-                                    value={form.content}
-                                    onValueChange={(value) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            content: value,
-                                        }))
-                                    }
-                                />
-                            ) : (
-                                <Textarea
-                                    id="new-item-content"
-                                    value={form.content}
-                                    onChange={updateField("content")}
-                                    rows={6}
-                                    className="font-mono text-xs leading-relaxed md:text-xs"
-                                />
-                            )}
+                            <ItemContentField
+                                typeName={type}
+                                value={form.content}
+                                language={form.language}
+                                rows={6}
+                                textareaId="new-item-content"
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        content: value,
+                                    }))
+                                }
+                            />
                         </Field>
                     )}
 
@@ -372,22 +314,5 @@ export function NewItemDialog({
                 </form>
             </DialogContent>
         </Dialog>
-    );
-}
-
-function Field({
-    label,
-    htmlFor,
-    children,
-}: {
-    label: string;
-    htmlFor: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <div className="flex flex-col gap-1.5">
-            <Label htmlFor={htmlFor}>{label}</Label>
-            {children}
-        </div>
     );
 }

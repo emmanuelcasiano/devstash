@@ -8,6 +8,9 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormError } from "@/components/ui/form-message";
+import { makeFieldUpdater } from "@/lib/forms";
+import { postJson } from "@/lib/http";
 import {
     EMAIL_PATTERN,
     MIN_PASSWORD_LENGTH,
@@ -28,12 +31,7 @@ export function RegisterForm() {
     const [error, setError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
 
-    function update(field: Field) {
-        return (event: React.ChangeEvent<HTMLInputElement>) => {
-            const { value } = event.target;
-            setForm((prev) => ({ ...prev, [field]: value }));
-        };
-    }
+    const update = makeFieldUpdater(setForm);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -58,39 +56,29 @@ export function RegisterForm() {
         }
 
         setPending(true);
-        try {
-            const response = await fetch("/api/auth/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name,
-                    email: form.email,
-                    password: form.password,
-                    confirmPassword: form.confirmPassword,
-                }),
-            });
+        const result = await postJson<{
+            error?: string;
+            verificationRequired?: boolean;
+        }>("/api/auth/register", {
+            name,
+            email: form.email,
+            password: form.password,
+            confirmPassword: form.confirmPassword,
+        });
 
-            const data = (await response.json().catch(() => null)) as
-                | { error?: string; verificationRequired?: boolean }
-                | null;
-
-            if (!response.ok) {
-                setError(data?.error ?? "Something went wrong. Please try again.");
-                setPending(false);
-                return;
-            }
-
-            // When email verification is disabled the account is ready to use,
-            // so send them to sign-in without the "check your email" prompt.
-            router.push(
-                data?.verificationRequired === false
-                    ? "/sign-in?registered=1&verify=0"
-                    : "/sign-in?registered=1",
-            );
-        } catch {
-            setError("Something went wrong. Please try again.");
+        if (!result.ok) {
+            setError(result.error ?? "Something went wrong. Please try again.");
             setPending(false);
+            return;
         }
+
+        // When email verification is disabled the account is ready to use,
+        // so send them to sign-in without the "check your email" prompt.
+        router.push(
+            result.data?.verificationRequired === false
+                ? "/sign-in?registered=1&verify=0"
+                : "/sign-in?registered=1",
+        );
     }
 
     return (
@@ -102,14 +90,7 @@ export function RegisterForm() {
                 </p>
             </div>
 
-            {error && (
-                <p
-                    role="alert"
-                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                    {error}
-                </p>
-            )}
+            {error && <FormError>{error}</FormError>}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
                 <div className="flex flex-col gap-2">

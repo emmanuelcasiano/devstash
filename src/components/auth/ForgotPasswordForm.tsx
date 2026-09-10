@@ -7,6 +7,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormError } from "@/components/ui/form-message";
+import { postJson } from "@/lib/http";
 import { EMAIL_PATTERN } from "@/lib/validation/auth";
 
 export function ForgotPasswordForm() {
@@ -25,25 +27,14 @@ export function ForgotPasswordForm() {
         }
 
         setPending(true);
-        try {
-            const response = await fetch("/api/auth/forgot-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
-            });
-            if (!response.ok) {
-                const data = (await response.json().catch(() => null)) as
-                    | { error?: string }
-                    | null;
-                setError(data?.error ?? "Something went wrong. Please try again.");
-                setPending(false);
-                return;
-            }
-            setSent(true);
-        } catch {
-            setError("Something went wrong. Please try again.");
+        const result = await postJson("/api/auth/forgot-password", { email });
+
+        if (!result.ok) {
+            setError(result.error ?? "Something went wrong. Please try again.");
             setPending(false);
+            return;
         }
+        setSent(true);
     }
 
     if (sent) {
@@ -77,14 +68,7 @@ export function ForgotPasswordForm() {
                 </p>
             </div>
 
-            {error && (
-                <p
-                    role="alert"
-                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                    {error}
-                </p>
-            )}
+            {error && <FormError>{error}</FormError>}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
                 <div className="flex flex-col gap-2">

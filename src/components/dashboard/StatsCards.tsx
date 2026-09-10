@@ -3,17 +3,13 @@ import type { LucideIcon } from "lucide-react";
 
 import { getCollectionStats } from "@/lib/db/collections";
 import { getItemStats } from "@/lib/db/items";
-import { Card, CardContent } from "@/components/ui/card";
+import { StatTile } from "@/components/shared/StatTile";
 
 interface Stat {
     label: string;
     value: number;
     icon: LucideIcon;
     color: string;
-}
-
-function StatIcon({ icon: Icon, color }: { icon: LucideIcon; color: string }) {
-    return <Icon className="size-5" style={{ color }} />;
 }
 
 export async function StatsCards() {
@@ -52,20 +48,13 @@ export async function StatsCards() {
     return (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {stats.map((stat) => (
-                <Card key={stat.label}>
-                    <CardContent className="flex items-center gap-3">
-                        <div
-                            className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-                            style={{ backgroundColor: `${stat.color}1a` }}
-                        >
-                            <StatIcon icon={stat.icon} color={stat.color} />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                            <p className="truncate text-xs text-muted-foreground">{stat.label}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <StatTile
+                    key={stat.label}
+                    icon={stat.icon}
+                    color={stat.color}
+                    value={stat.value}
+                    label={stat.label}
+                />
             ))}
         </div>
     );
