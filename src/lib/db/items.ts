@@ -21,6 +21,7 @@ export interface ItemWithType {
     isFavorite: boolean;
     isPinned: boolean;
     createdAt: Date;
+    fileUrl: string | null;
     itemType: ItemTypeSummary;
     tags: string[];
 }
@@ -53,7 +54,6 @@ export interface ItemDetail extends ItemWithType {
     contentType: "TEXT" | "FILE" | "URL";
     content: string | null;
     url: string | null;
-    fileUrl: string | null;
     fileName: string | null;
     fileSize: number | null;
     language: string | null;
@@ -68,6 +68,7 @@ interface PrismaItemWithRelations {
     isFavorite: boolean;
     isPinned: boolean;
     createdAt: Date;
+    fileUrl: string | null;
     itemType: ItemTypeSummary;
     tags: { name: string }[];
 }
@@ -80,6 +81,7 @@ function toItemWithType(item: PrismaItemWithRelations): ItemWithType {
         isFavorite: item.isFavorite,
         isPinned: item.isPinned,
         createdAt: item.createdAt,
+        fileUrl: item.fileUrl,
         itemType: item.itemType,
         tags: item.tags.map((tag) => tag.name),
     };
