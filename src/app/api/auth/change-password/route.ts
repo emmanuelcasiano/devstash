@@ -9,14 +9,16 @@ import {
   rateLimitResponse,
   resetRateLimit,
 } from "@/lib/rate-limit";
+import {
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_LENGTH_MESSAGE,
+} from "@/lib/validation/auth";
 
 interface ChangePasswordBody {
   currentPassword?: unknown;
   newPassword?: unknown;
   confirmPassword?: unknown;
 }
-
-const MIN_PASSWORD_LENGTH = 8;
 
 /**
  * POST /api/auth/change-password
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
 
   if (newPassword.length < MIN_PASSWORD_LENGTH) {
     return NextResponse.json(
-      { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` },
+      { error: PASSWORD_LENGTH_MESSAGE },
       { status: 400 },
     );
   }

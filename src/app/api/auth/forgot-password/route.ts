@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { issueAndSendPasswordResetEmail } from "@/lib/auth/password-reset";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_PATTERN } from "@/lib/validation/auth";
 
 /**
  * POST /api/auth/forgot-password

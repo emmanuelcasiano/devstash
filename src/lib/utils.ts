@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Upper-cases the first character of a string, leaving the rest untouched. */
+export function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
 export function formatShortDate(date: Date) {
   return date.toLocaleDateString("en-US", {
     month: "short",

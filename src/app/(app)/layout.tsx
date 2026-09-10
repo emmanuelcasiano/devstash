@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { auth } from "@/auth";
 import { TopBar } from "@/components/layout/TopBar";
 import { SidebarAside } from "@/components/layout/Sidebar";
@@ -19,7 +21,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getRecentCollections(SIDEBAR_COLLECTIONS_LIMIT),
   ]);
 
-  const user = session?.user ?? null;
+  // Defense-in-depth: `/dashboard` protection would otherwise rest solely on the
+  // `proxy.ts` matcher. `/profile` and `/items/[type]` self-guard already; this
+  // makes the whole `(app)` group refuse to render without a session.
+  if (!session?.user) {
+    redirect("/sign-in");
+  }
+
+  const user = session.user;
 
   return (
     <SidebarProvider>

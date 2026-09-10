@@ -15,13 +15,30 @@ const optionalText = z
         return trimmed.length > 0 ? trimmed : null;
     });
 
-/** Like {@link optionalText} but must be a valid URL when present. */
+/**
+ * True for a syntactically valid absolute URL that uses the `http` or `https`
+ * scheme. A bare `z.url()` only checks that `new URL()` parses, so it would
+ * happily accept `javascript:` / `data:` URLs — which then get rendered into an
+ * `<a href>` / `<img src>` in the item drawer. Restricting the scheme here keeps
+ * that class of value out of the database entirely.
+ */
+function isHttpUrl(value: string): boolean {
+    let parsed: URL;
+    try {
+        parsed = new URL(value);
+    } catch {
+        return false;
+    }
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+}
+
+/** Like {@link optionalText} but must be a valid http(s) URL when present. */
 const optionalUrl = z
     .string()
     .nullish()
     .transform((value) => (value ?? "").trim())
-    .refine((value) => value === "" || z.url().safeParse(value).success, {
-        message: "Enter a valid URL.",
+    .refine((value) => value === "" || isHttpUrl(value), {
+        message: "Enter a valid http(s) URL.",
     })
     .transform((value) => (value.length > 0 ? value : null));
 

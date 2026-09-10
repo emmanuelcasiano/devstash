@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GitHubIcon } from "@/components/auth/GitHubIcon";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_PATTERN } from "@/lib/validation/auth";
 
 const OAUTH_ERRORS: Record<string, string> = {
     OAuthAccountNotLinked:

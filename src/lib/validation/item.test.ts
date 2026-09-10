@@ -79,6 +79,30 @@ describe("updateItemSchema", () => {
         expect(result.success).toBe(false);
     });
 
+    it("accepts http and https but rejects other URL schemes", () => {
+        for (const url of [
+            "http://example.com",
+            "https://example.com/docs?q=1#frag",
+        ]) {
+            expect(
+                updateItemSchema.safeParse({ title: "Link", url, tags: [] })
+                    .success,
+            ).toBe(true);
+        }
+
+        for (const url of [
+            "javascript:alert(1)",
+            "data:text/html,<script>alert(1)</script>",
+            "ftp://example.com/file",
+            "vbscript:msgbox(1)",
+        ]) {
+            expect(
+                updateItemSchema.safeParse({ title: "Link", url, tags: [] })
+                    .success,
+            ).toBe(false);
+        }
+    });
+
     it("trims, drops empty, and de-duplicates tags", () => {
         const result = updateItemSchema.safeParse({
             title: "Item",
@@ -204,6 +228,18 @@ describe("createItemSchema", () => {
         if (present.success) {
             expect(present.data.url).toBe("https://example.com/docs");
         }
+    });
+
+    it("rejects a file/image whose fileUrl uses a non-http scheme", () => {
+        const result = createItemSchema.safeParse({
+            type: "image",
+            title: "Screenshot",
+            fileUrl: "javascript:alert(1)",
+            fileName: "shot.png",
+            fileSize: 2048,
+            tags: [],
+        });
+        expect(result.success).toBe(false);
     });
 
     it("does not require a URL for non-link types", () => {

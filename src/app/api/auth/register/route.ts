@@ -7,6 +7,11 @@ import {
   issueAndSendVerificationEmail,
 } from "@/lib/auth/verification";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import {
+  EMAIL_PATTERN,
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_LENGTH_MESSAGE,
+} from "@/lib/validation/auth";
 
 interface RegisterBody {
   name?: unknown;
@@ -14,9 +19,6 @@ interface RegisterBody {
   password?: unknown;
   confirmPassword?: unknown;
 }
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 8;
 
 /**
  * POST /api/auth/register
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
 
   if (password.length < MIN_PASSWORD_LENGTH) {
     return NextResponse.json(
-      { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` },
+      { error: PASSWORD_LENGTH_MESSAGE },
       { status: 400 },
     );
   }

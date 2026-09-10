@@ -8,8 +8,10 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const MIN_PASSWORD_LENGTH = 8;
+import {
+    MIN_PASSWORD_LENGTH,
+    PASSWORD_LENGTH_MESSAGE,
+} from "@/lib/validation/auth";
 
 export function ResetPasswordForm() {
     const router = useRouter();
@@ -29,7 +31,7 @@ export function ResetPasswordForm() {
         setError(null);
 
         if (password.length < MIN_PASSWORD_LENGTH) {
-            setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+            setError(PASSWORD_LENGTH_MESSAGE);
             return;
         }
         if (password !== confirmPassword) {
