@@ -1,119 +1,18 @@
-# Current Feature: Refactor — Break Up Large Components & Dedupe Shared UI Primitives
+# Current Feature
+
+<!-- Feature Name -->
 
 ## Status
 
-In Progress
+<!-- Not Started|In Progress|Completed -->
 
 ## Goals
 
-Pure internal refactor. **No user-facing behavior change** — every screen, form,
-drawer, and interaction must look and behave exactly as it does now. Lint,
-`npm test`, and `npm run build` must pass. Verification is "diff the rendered
-output / click through the flows", not new features.
-
-### 1. Split `src/components/items/ItemDrawer.tsx` (816 lines)
-
-- Extract `useItemDetail(openItemId)` — the `fetch` + `AbortController` +
-  id-tagged `loadedItem` / `errorId` / `reloadKey` / `retry` state — into
-  `src/components/items/use-item-detail.ts`. Keep the `ItemDetailPayload` type
-  and `toPayload()` with the hook (or a small sibling module).
-- Extract `<ItemEditForm item onSaved />` — all edit-mode state (`form`,
-  `updateField`, `startEdit` / `cancelEdit` / `handleSave`) and the edit JSX —
-  into `src/components/items/ItemEditForm.tsx`.
-- Extract `<ItemDetailView item />` — the read-mode Description / Content / Link /
-  File / Tags / Collections / Details sections — into
-  `src/components/items/ItemDetailView.tsx`, with the nested image/file/download
-  block as its own `<ItemFileSection item />`.
-- Extract `<DeleteItemDialog itemId title onDeleted />` — the `AlertDialog` plus
-  `deleteForId` / `deleteError` / `deleting` state and `handleDelete` — into
-  `src/components/items/DeleteItemDialog.tsx`.
-- `ItemDrawer` is left as a ~120-line shell: run the hook, derive
-  `isLoading` / `isError`, render the `Sheet` + skeleton + one sub-view.
-
-### 2. Share the item-form primitives between `ItemDrawer` and `NewItemDialog`
-
-- One `<Field label htmlFor>` in `src/components/ui/field.tsx`; delete both local
-  copies.
-- One `makeFieldUpdater(setForm)` (or `useFormFields`) util for the repeated
-  `updateField(field)` change-handler factory.
-- One shared `ItemFormValues` type + `EMPTY_ITEM_FORM` const
-  (`title/description/content/url/language/tags`).
-- One `<ItemContentField typeName value onChange readOnly />` that owns the
-  `CodeEditor` / `MarkdownEditor` / `Textarea` switch, replacing the ~30
-  near-identical lines in each caller.
-- Move `CONTENT_TYPES` / `LANGUAGE_TYPES` next to `CREATE_ITEM_TYPES` in
-  `src/lib/validation/item.ts` (keep them as string sets; no schema change).
-
-### 3. Shared alert / notice components
-
-- `<FormError>{message}</FormError>` for the
-  `role="alert"` + `border-destructive/40 bg-destructive/10 …` block (8
-  occurrences across SignInForm, RegisterForm, ResetPasswordForm,
-  ForgotPasswordForm, ProfileAccountActions, ItemDrawer ×2, NewItemDialog).
-- `<FormNotice>{message}</FormNotice>` for the `border-border bg-muted/50 …`
-  success banners (SignInForm ×3, ProfileAccountActions).
-- Place in `src/components/ui/` (or `src/components/shared/`).
-
-### 4. `postJson` fetch helper for auth client forms
-
-- `postJson<T>(url, body): Promise<{ ok: boolean; data: T | null; error: string | null }>`
-  in `src/lib/http.ts`, folding the repeated
-  `(await response.json().catch(() => null)) as { error?: string } | null` +
-  `setError(data?.error ?? "…")` dance (6 occurrences across ForgotPasswordForm,
-  SignInForm, RegisterForm, ResetPasswordForm, ProfileAccountActions ×2).
-
-### 5. Split `src/components/auth/SignInForm.tsx` (270 lines)
-
-- Extract `<ResendVerification email />` — `showResend` / `resendPending` /
-  `resendDone` / `resendError` state, `handleResend`, and its JSX block — into
-  its own component, rendered as a sibling.
-- Collapse the three near-identical `justVerified` / `justReset` /
-  `justRegistered` banners onto `<FormNotice>` from goal 3.
-
-### 6. Split `src/components/layout/Sidebar.tsx` (362 lines)
-
-- `<SidebarCollectionLink collection collapsed trailing />` for the repeated
-  `collapsed ? <Tooltip><Link/></Tooltip> : <Link/>` fork (3 call sites: types
-  list aside, favorites, recent).
-- `<SidebarSection title collapsed>` for the repeated `Collapsible` +
-  `CollapsibleTrigger` chrome.
-- One `<SidebarCollectionGroup label items collapsed trailing />` used for both
-  the Favorites and Recent lists (they differ only by the trailing star vs
-  colored dot).
-
-### 7. Smaller dedupe
-
-- `getItemById` in `src/lib/db/items.ts` reuses `toItemWithType(item)` and
-  spreads the extra detail fields instead of re-mapping all 12 shared fields.
-- Extract the `isLink || isFile ? null : …` field-nulling shared by `createItem`
-  and `updateItem` into a `nullifyItemFieldsForType(typeName, data)` helper in
-  the same file.
-- `requireUserId()` + `zodMessage(error)` helpers for the `auth()` guard and
-  `parsed.error.issues.map(i => i.message).join(" ")` repeated 3× in
-  `src/actions/items.ts`.
-- `<StatTile icon color value label />` shared by
-  `src/app/(app)/profile/page.tsx` (2 inline cards) and
-  `src/components/dashboard/StatsCards.tsx`.
+<!-- Goals & requirements -->
 
 ## Notes
 
-- Do the goals in order; run `npm run lint` after each group and
-  `npm test` + `npm run build` before committing. Groups are independent enough
-  to land incrementally if the full set gets too large for one pass.
-- Testing scope (per `context/coding-standards.md`): only new **pure utilities**
-  get Vitest coverage. Added: `src/lib/forms.test.ts` (`makeFieldUpdater`, 2
-  cases) and 7 cases in `src/lib/validation/item.test.ts` for
-  `isContentItemType` / `isLanguageItemType` and `contentFieldsForType` (moved
-  from `src/lib/db/items.ts` into the Prisma-free validation module so it can be
-  tested — `src/lib/prisma.ts` throws at import when `DATABASE_URL` is unset, so
-  nothing under `src/lib/db/**` is importable from a test). `postJson` (wraps
-  `fetch`, no mocking harness in the repo) and `zodMessage` (a one-line
-  `.join`) were left uncovered. Extracted React components are out of scope.
-  `npm test` went 7 files / 66 tests → 8 files / 75 tests.
-- No DB migration, no new packages, no new env vars, no route changes expected.
-- Watch the `react-hooks/static-components` and `react-hooks/set-state-in-effect`
-  lint rules that bit earlier drawer work — `useItemDetail` must not `setState`
-  synchronously in the effect body.
+<!-- Any extra notes -->
 
 ## History
 
@@ -153,3 +52,4 @@ output / click through the flows", not new features.
 - **2026-09-10** — File List View (Completed): built per `context/features/file-display-spec.md`. The `/items/file` list now renders a single-column, Google Drive / Dropbox style list instead of the generic `ItemCard` grid. **New `src/components/items/FileRow.tsx`** (`"use client"`): one row per file. A local `FILE_ICONS` map keys the existing pure `extensionOf()` (from `src/lib/validation/upload.ts`) to a Lucide glyph — `FileJson` for `.json`, `FileCode` for `.yaml`/`.yml`/`.toml`/`.ini`/`.xml`, `FileSpreadsheet` for `.csv`, `FileText` for `.pdf`/`.md`/`.txt`, plain `File` as the fallback — rendered via `createElement` to satisfy the `react-hooks/static-components` lint rule (same trick as `ItemTypeIcon.tsx`). The row shows the icon, the file name (`item.fileName`, falling back to `item.title`), the size (`formatFileSize`), and the upload date (`formatShortDate`, matching `ItemCard`), plus a trailing download button. Because an `<a>` can't nest inside a `<button>`, the click target is an `absolute inset-0` overlay `<button>` calling `useItemDrawer().openItem(item.id)`, and the download `<a>` (href `/api/items/<id>/download`, the pre-existing streaming endpoint) is a sibling with `relative z-10` + `onClick` `stopPropagation` so it sits above the overlay and never also opens the drawer; the text spans are `pointer-events-none` so clicks fall through to the overlay. `hover:bg-muted/50` on the row container gives the hover highlight. Responsive: the right-aligned size and date columns are `hidden sm:block`; below `sm` they collapse into a single `"59 B · Sep 10"` line under the file name. **`src/lib/db/items.ts`** — added `fileName: string | null` and `fileSize: number | null` to the `ItemWithType` interface, `PrismaItemWithRelations`, and the `toItemWithType` mapper so list rows can render them; both are scalar columns already returned by the existing `include: { itemType, tags }` finds in `getPinnedItems` / `getRecentItems` / `getItemsByType`, so no query changed. Removed the now-redundant explicit `fileName` / `fileSize` from `ItemDetail` (it inherits them from `ItemWithType`) — same cleanup the Image Gallery feature did for `fileUrl`. **`src/app/(app)/items/[type]/page.tsx`** — a new `isFileList = itemType.name === "file"` branch renders `<FileRow>` inside `<ul className="divide-y divide-border">` wrapped in an `overflow-hidden rounded-xl border` container, placed before the `isImageGallery` branch; all other item types keep the `ItemCard` grid. No new pure logic (the `items.ts` change is a passthrough field on a Prisma-backed function with no mocking harness; the icon map is component-local view logic and components are out of scope per the Testing standard), so no new Vitest tests — `npm test` stays at 7 files / 64 tests. No DB migration, no new packages, no new env vars; the build route list is unchanged. Verified with Playwright on the dev server as `demo@devstash.io`: seed data has zero file items, so created a `.md` (59 B) and a `.json` (28 B) through the New File dialog (real R2 uploads) → the list rendered both rows with a divider, extension-specific icons, right-aligned size/date, and working download links; clicking a row opened the `ItemDrawer`; at 390px wide the size/date collapsed to a single line under the name. Both test items were then deleted via the drawer (R2 objects cleaned up by `deleteItem`) — Neon `development` back to 0 file items. Lint, `npm test`, and `npm run build` pass. Merged to `main`, branch `feature/file-list-view` deleted.
 - **2026-09-10** — Quick-Copy Button on Type-Page Cards (Completed): each `ItemCard` on `/items/[type]` (snippets, prompts, commands, notes, links) now shows a small copy button in its bottom-right corner, revealed on card hover or when the button takes keyboard focus (`opacity-0` → `group-hover:opacity-100` / `focus-visible:opacity-100`). Clicking it copies `content ?? url ?? description` — the same precedence as the item drawer's Copy button — via `navigator.clipboard.writeText`, swaps the icon to a check for 1.5s, and does not open the drawer (`event.stopPropagation()`); it isn't rendered when there's nothing to copy. To avoid nesting a `<button>` inside the card's existing open-`<button>`, `ItemCard`'s markup was wrapped in a new `relative` `<div>` and the copy button is a sibling positioned `absolute right-2 bottom-2`. `src/lib/db/items.ts` gained `content: string | null` and `url: string | null` on the `ItemWithType` interface (plus `PrismaItemWithRelations` and the `toItemWithType` mapper) so the card has the value to copy without a follow-up fetch; both are scalar columns already returned by the existing `include: { itemType, tags }` finds, so no query changed. The now-redundant explicit `content` / `url` were dropped from `ItemDetail` (it inherits them from `ItemWithType`). Scope was limited (per the user) to the type-page grid — `ItemRow` (dashboard), `FileRow`, and `ImageCard` are untouched. No new pure logic, so no new Vitest tests (`npm test` stays at 7 files / 64 tests); browser verification was taken over by the user. No DB migration, no new packages, no new env vars; the build route list is unchanged. Lint, `npm test`, and `npm run build` pass. Merged to `main`, branch `feature/card-quick-copy` deleted.
 - **2026-09-10** — Audit Quick Wins (Completed): applied the six low-risk findings from a `codebase-scanner` audit; the larger findings (sidebar collection query over-fetch, `getRecentCollections` running twice per dashboard render, unbounded `/items/[type]` list, the download-proxy `fileUrl` trust boundary, JWT sessions never re-validated against the DB, `verify-email` mutating on GET, the 821-line `ItemDrawer.tsx`) were left out of scope as needing design/UI/infra work. (1) **URL scheme hardening** — `optionalUrl` in `src/lib/validation/item.ts` replaced its bare `z.url()` check with a new `isHttpUrl()` helper (`new URL()` parse + `protocol` must be `http:`/`https:`), so both `url` and `fileUrl` now reject `javascript:` / `data:` / `ftp:` / `vbscript:` values that were previously storable and rendered into `<a href>` / `<img src>` in the item drawer; the Zod message changed to "Enter a valid http(s) URL." (2) **`updateItem` field normalization** — the query in `src/lib/db/items.ts` now also selects `itemType.name` in its ownership check and forces `content`/`url`/`language` to `null` for the types they don't apply to (link keeps only `url`; file/image keep none of the three), mirroring `createItem`. The drawer's edit form already sends `null` for hidden fields, so this only hardens the path against a hand-crafted server-action call; `updateItemSchema` itself was left as-is because the edit payload carries no `type` to refine against. (3) **`resend-verification` response** — `src/app/api/auth/resend-verification/route.ts` now wraps the Resend send in an inner try/catch that logs and lets the handler return `{ ok: true }` (200), instead of the outer catch turning a send failure into a 500. A 500 there only ever fired for a registered-but-unverified address, making it a mild email-enumeration oracle; this matches the pattern `forgot-password` already uses. (4) **`(app)` layout auth guard** — `src/app/(app)/layout.tsx` now `redirect("/sign-in")` when there is no session, so `/dashboard` protection no longer rests solely on the `proxy.ts` matcher (`/profile` and `/items/[type]` already self-guard). Plain `/sign-in` with no `callbackUrl` since a layout can't cheaply read the current pathname; the proxy still supplies a proper `callbackUrl` for `/dashboard/*`. (5) **Shared auth constants** — new `src/lib/validation/auth.ts` exports `EMAIL_PATTERN`, `MIN_PASSWORD_LENGTH`, and `PASSWORD_LENGTH_MESSAGE`; the five auth API routes (`register`, `change-password`, `reset-password`, `forgot-password`, `resend-verification`) plus `SignInForm.tsx`, `RegisterForm.tsx`, `ResetPasswordForm.tsx`, `ForgotPasswordForm.tsx`, and `ProfileAccountActions.tsx` import from it instead of each re-declaring the regex / number / message. Constant-sharing only — the routes still hand-roll their JSON+field validation (the larger "convert every auth route to Zod" refactor was explicitly out of scope). (6) **`capitalize()` extracted** — moved the one-line title-case helper into `src/lib/utils.ts`; `ItemDrawer.tsx`, `src/app/(app)/items/[type]/page.tsx` (was a local `toTitleCase`), and `Sidebar.tsx` (was inlined) now import it. **Tests:** `src/lib/validation/item.test.ts` gained two cases — `updateItemSchema` accepts `http`/`https` and rejects the four non-http schemes, and `createItemSchema` rejects a file/image whose `fileUrl` uses a non-http scheme; `npm test` now 7 files / 66 tests. Goal 2 (Prisma query) and goals 3–6 got no unit tests, consistent with the rest of the repo. Also reverted an unrelated editor-made whitespace re-indent in `context/coding-standards.md` so it stayed out of the feature diff. No DB migration, no new packages, no new env vars; the build route list is unchanged. Lint, `npm test`, and `npm run build` pass. Merged to `main`, branch `feature/audit-quick-wins` deleted.
+- **2026-09-10** — Refactor: Break Up Large Components & Dedupe Shared UI Primitives (Completed): pure internal refactor from a "check for large blocks we can split" pass — no user-facing behavior change, no route/dependency/DB changes. **`ItemDrawer.tsx` 816 → 280 lines**, split into `src/components/items/use-item-detail.ts` (the `useItemDetail(openItemId)` fetch hook — `AbortController` + id-tagged `loadedItem`/`errorId`/`reloadKey`, plus the exported `ItemDetailPayload` type and `toPayload()`), `ItemActionBar.tsx` (read-view Favorite/Pin/Copy/Edit/Delete row, owns its own `copied` state, parent passes `key={item.id}`), `ItemEditFields.tsx` (presentational edit fields; shows content/language/URL based on `isContentItemType`/`isLanguageItemType`), `ItemDetailView.tsx` (read-mode sections + `ItemFileSection` for the image-preview/file-card/download block + `ItemMetaSections` for Collections + Created/Updated, which render in both modes), `DeleteItemDialog.tsx` (self-contained: owns `deleting`/`error`, calls the `deleteItem` action + toast, blocks close while pending), `DrawerSection.tsx` (the `<DrawerSection label icon>` helper), `ItemContentField.tsx` (the CodeEditor/MarkdownEditor/Textarea-or-`<pre>` switch, previously ~30 duplicated lines in the drawer and the new-item dialog), and `item-form.ts` (`ItemFormValues` type, `EMPTY_ITEM_FORM`, `DRAWER_CODE_MAX_HEIGHT = 1200`). The shell keeps the id-tagged `editingId`/`deleteForId` toggles and the edit-form state and renders the `Sheet` + header + one of `ItemEditFields`/`ItemDetailView` + `ItemMetaSections` + `DeleteItemDialog`. **Shared primitives:** `src/components/ui/form-message.tsx` (`<FormError>` red `role="alert"` box + `<FormNotice>` muted confirmation box — replaced 8 inline destructive alerts + 4 notice banners across the auth forms, item drawer, new-item dialog, and profile page), `src/components/ui/field.tsx` (`<Field label htmlFor>`, was defined identically in the drawer and dialog), `src/lib/http.ts` (`postJson<T>(url, body)` → `{ ok, status, data, error }`, swallows network throws + non-JSON body; folded the `fetch` + `(await res.json().catch(() => null)) as …` dance in 6 auth-form call sites; `error` holds only the server message so callers keep their own fallback copy), `src/lib/forms.ts` (`makeFieldUpdater(setForm)` → `updateField(name)` → an `onChange` handler; replaced 3 hand-written closures incl. `RegisterForm`'s), and `src/components/shared/StatTile.tsx` (the tinted-icon-tile stat card shared by `StatsCards.tsx` and the profile Usage section, which had it inline twice). **`SignInForm.tsx` 270 → 203**: extracted `src/components/auth/ResendVerification.tsx` (owns `sent`/`pending`/`error`, POSTs via `postJson`; parent bumps a `key` per sign-in attempt so it re-mounts fresh — replaces the old `setResendDone(false)` reset). `RegisterForm`/`ForgotPasswordForm`/`ResetPasswordForm`/`ProfileAccountActions` now use `postJson` + `FormError`/`FormNotice` (the delete-account dialog keeps its plain-text error — different style). **`Sidebar.tsx`**: main component body ~270 → ~110 lines via `SidebarSection` (the `Collapsible` + chevron chrome), `SidebarTypeLink`, `SidebarCollectionLink`, and `SidebarCollectionGroup` (one component for both the Favorites and Recent lists, which differ only by a trailing star vs. colored dot) — removes the collapsed/expanded `Tooltip`-vs-`Link` fork triplication; type/collection icons now render through the existing `<ItemTypeIcon>` to satisfy the `react-hooks/static-components` rule (a bare `const Icon = getItemTypeIcon(...)` inside a named sub-component trips it, unlike inside an inline `.map`). Total Sidebar file grew ~85 lines from the helper boilerplate — accepted tradeoff for removing the dup. **`src/lib/db/items.ts`**: `getItemById` now returns `{ ...toItemWithType(item), contentType, language, updatedAt, collections }` instead of re-mapping all 12 base fields; `createItem`/`updateItem` share a new `contentFieldsForType(typeName, data)` helper for the per-type `content`/`url`/`language` nulling (link keeps only `url`; file/image keep none; text keeps content+language, never url). That helper was **moved into `src/lib/validation/item.ts`** (pure, Prisma-free) so it can be unit tested — anything importing `src/lib/db/**` pulls in `src/lib/prisma.ts`, which throws at import when `DATABASE_URL` is unset (Vitest doesn't load `.env`), which is why nothing under `src/lib/db/**` has tests. **`src/actions/items.ts`**: `requireUserId(verb)` (`auth()` guard → `{ userId } | { error }`) and `zodMessage(error)` (flatten Zod issues) + a `GENERIC_ERROR` const replace the guard/message/try-catch shape repeated in all three actions. **`src/lib/validation/item.ts`** also gained `CONTENT_ITEM_TYPES`/`isContentItemType` and `LANGUAGE_ITEM_TYPES`/`isLanguageItemType` (mirrors the existing `isFileItemType` pattern) so the drawer and dialog stop hand-rolling `new Set([...])`. **Tests:** new `src/lib/forms.test.ts` (`makeFieldUpdater`, 2 cases) + 7 cases in `src/lib/validation/item.test.ts` for the two new predicates and `contentFieldsForType`; `postJson` (wraps `fetch`, no mocking harness in the repo) and `zodMessage` (one-line `.join`) left uncovered; extracted React components are out of scope per the Testing standard. `npm test` 7 files / 66 tests → 8 files / 75 tests. Behavior-preservation was verified by diffing the extracted markup/control flow against the originals; browser click-through of the drawer (view/edit/delete), auth forms, and sidebar was left to the user. Lint, `npm test`, and `npm run build` pass; build route list unchanged. Merged to `main`, branch `feature/refactor-large-components` deleted.
