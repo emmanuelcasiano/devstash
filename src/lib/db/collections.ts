@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/db/current-user";
+import type { CreateCollectionInput } from "@/lib/validation/collection";
+
+/** Fallback border colour for a collection with no items to derive one from. */
+const DEFAULT_COLLECTION_COLOR = "#6b7280";
 
 export interface CollectionTypeSummary {
     id: string;
@@ -72,10 +76,53 @@ export async function getRecentCollections(limit = 6): Promise<CollectionWithSta
             isFavorite: collection.isFavorite,
             itemCount: collection.items.length,
             createdAt: collection.createdAt,
-            color: sortedTypes[0]?.type.color ?? "#6b7280",
+            color: sortedTypes[0]?.type.color ?? DEFAULT_COLLECTION_COLOR,
             types: sortedTypes.map((entry) => entry.type),
         };
     });
+}
+
+/**
+ * Creates a new collection for the current user and returns it in the
+ * {@link CollectionWithStats} shape so the caller can drop it straight into the
+ * dashboard's collection lists without a re-fetch. A brand-new collection has no
+ * items, so `itemCount` is 0, `types` is empty, and `color` falls back to the
+ * neutral default.
+ *
+ * Scoped to the current user: returns `null` when there is no session and never
+ * writes.
+ */
+export async function createCollection(
+    data: CreateCollectionInput,
+): Promise<CollectionWithStats | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const collection = await prisma.collection.create({
+        data: {
+            name: data.name,
+            description: data.description,
+            userId,
+        },
+        select: {
+            id: true,
+            name: true,
+            description: true,
+            isFavorite: true,
+            createdAt: true,
+        },
+    });
+
+    return {
+        id: collection.id,
+        name: collection.name,
+        description: collection.description,
+        isFavorite: collection.isFavorite,
+        itemCount: 0,
+        createdAt: collection.createdAt,
+        color: DEFAULT_COLLECTION_COLOR,
+        types: [],
+    };
 }
 
 export async function getCollectionStats(): Promise<CollectionStats> {

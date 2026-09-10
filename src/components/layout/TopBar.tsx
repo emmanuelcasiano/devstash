@@ -1,9 +1,10 @@
 "use client";
 
-import { FolderPlus, Layers, PanelLeft, Search } from "lucide-react";
+import { Layers, PanelLeft, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NewCollectionDialog } from "@/components/collections/NewCollectionDialog";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { useSidebar } from "@/components/layout/sidebar-provider";
 
@@ -32,10 +33,7 @@ export function TopBar() {
                 <Input type="search" placeholder="Search items..." className="pl-8" />
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                    <FolderPlus />
-                    New Collection
-                </Button>
+                <NewCollectionDialog />
                 <NewItemDialog />
             </div>
         </header>

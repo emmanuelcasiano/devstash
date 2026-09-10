@@ -1,8 +1,11 @@
 "use server";
 
-import type { ZodError } from "zod";
-
-import { auth } from "@/auth";
+import {
+    GENERIC_ERROR,
+    requireUserId,
+    zodMessage,
+    type ActionResult,
+} from "@/actions/shared";
 import {
     createItem as createItemQuery,
     deleteItem as deleteItemQuery,
@@ -11,30 +14,7 @@ import {
 } from "@/lib/db/items";
 import { createItemSchema, updateItemSchema } from "@/lib/validation/item";
 
-export type ActionResult<T> =
-    | { success: true; data: T }
-    | { success: false; error: string };
-
-/**
- * Resolves the signed-in user's id, or an `{ error }` describing the failed
- * action (`verb` is folded into "You must be signed in to <verb>.").
- */
-async function requireUserId(
-    verb: string,
-): Promise<{ userId: string } | { error: string }> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { error: `You must be signed in to ${verb}.` };
-    }
-    return { userId: session.user.id };
-}
-
-/** Flattens a Zod error into the project's single-string `error` message. */
-function zodMessage(error: ZodError): string {
-    return error.issues.map((issue) => issue.message).join(" ") || "Invalid input.";
-}
-
-const GENERIC_ERROR = "Something went wrong. Please try again.";
+export type { ActionResult } from "@/actions/shared";
 
 /**
  * Creates a new item from the top-bar "New Item" dialog.
