@@ -22,6 +22,8 @@ export interface ItemWithType {
     isPinned: boolean;
     createdAt: Date;
     fileUrl: string | null;
+    fileName: string | null;
+    fileSize: number | null;
     itemType: ItemTypeSummary;
     tags: string[];
 }
@@ -54,8 +56,6 @@ export interface ItemDetail extends ItemWithType {
     contentType: "TEXT" | "FILE" | "URL";
     content: string | null;
     url: string | null;
-    fileName: string | null;
-    fileSize: number | null;
     language: string | null;
     updatedAt: Date;
     collections: ItemCollectionSummary[];
@@ -69,6 +69,8 @@ interface PrismaItemWithRelations {
     isPinned: boolean;
     createdAt: Date;
     fileUrl: string | null;
+    fileName: string | null;
+    fileSize: number | null;
     itemType: ItemTypeSummary;
     tags: { name: string }[];
 }
@@ -82,6 +84,8 @@ function toItemWithType(item: PrismaItemWithRelations): ItemWithType {
         isPinned: item.isPinned,
         createdAt: item.createdAt,
         fileUrl: item.fileUrl,
+        fileName: item.fileName,
+        fileSize: item.fileSize,
         itemType: item.itemType,
         tags: item.tags.map((tag) => tag.name),
     };
