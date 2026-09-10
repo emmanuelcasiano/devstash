@@ -1,18 +1,30 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Collection Create
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add a working "New Collection" button in the top bar (`TopBar.tsx`) that opens a modal dialog to create a collection.
+- Modal fields: **name** (required) and **description** (optional). Follow the same shadcn `Dialog` pattern as `NewItemDialog.tsx`.
+- Server action `createCollection` in `src/actions/collections.ts` following the project's `ActionResult<T>` / `{ success, data, error }` contract: `auth()` guard → Zod validation → scoped query.
+- Zod schema in a pure `src/lib/validation/collection.ts` module (no Prisma/auth imports) so it can be unit tested, mirroring `src/lib/validation/item.ts`.
+- Query function `createCollection` in `src/lib/db/collections.ts`, user-scoped via the existing `getCurrentUserId()` cache, returning the new collection shape the client needs (align with `CollectionWithStats` so cards can render it without a re-fetch).
+- Collections stay user-scoped everywhere: server components fetch directly through `lib/db` functions; client-side calls go through an API route only where a server action isn't the right fit (create itself uses the server action, matching `createItem`).
+- On success: close the modal, `toast.success`, and `router.refresh()` so the dashboard (sidebar collections, "Recent Collections" grid, collection stats cards) reflects the new collection immediately.
+- On failure: inline `FormError` in the dialog **and** `toast.error`, matching `NewItemDialog`.
+- Add Vitest coverage for the new `collection` validation module (happy path, name required, blank description → null). The action + query get no unit tests, consistent with the rest of `src/actions` / `src/lib/db` (Prisma + `auth()`, no mocking harness).
 
 ## Notes
 
-<!-- Any extra notes -->
+- No `context/features/` spec exists for this — goals generated from the inline description.
+- The "New Collection" button already exists in `src/components/layout/TopBar.tsx` as a static `<Button variant="outline" size="sm">` with a `FolderPlus` icon; replace it with a new client `NewCollectionDialog` component (in `src/components/collections/`, a directory that does not exist yet) that renders its own `DialogTrigger` styled the same way.
+- Reference implementations to mirror closely: `src/components/items/NewItemDialog.tsx` (dialog + form + submit flow), `src/actions/items.ts` (`createItem` action, `requireUserId`, `zodMessage`, `GENERIC_ERROR`), `src/lib/validation/item.ts` (`createItemSchema`, `optionalText` transform), `src/lib/db/items.ts` `createItem` (scoped insert + return shape).
+- `Collection` model fields relevant here: `name` (String, required), `description` (String?, `@db.Text`), `isFavorite` (default false), `userId`, `defaultTypeId` (String?, optional — out of scope for this feature). `@@unique` is only on `ItemType`, not `Collection`, so no duplicate-name handling is needed.
+- Shared UI primitives already available: `Dialog` (`src/components/ui/dialog.tsx`), `Field` (`src/components/ui/field.tsx`), `FormError`/`FormNotice` (`src/components/ui/form-message.tsx`), `makeFieldUpdater` (`src/lib/forms.ts`), `sonner` toasts.
+- Dashboard surfaces that must pick up the new collection after `router.refresh()`: `Sidebar.tsx` (Collections section, fetched in `src/app/(app)/layout.tsx`), `RecentCollections.tsx` / `CollectionCard.tsx`, and `StatsCards.tsx` (collection counts via `getCollectionStats`).
+- Follow the workflow in `context/ai-interaction.md`: branch `feature/collection-create`, implement, verify in the browser, `npm test` + `npm run build`, then ask before committing.
 
 ## History
 
