@@ -18,6 +18,8 @@ export interface ItemWithType {
     id: string;
     title: string;
     description: string | null;
+    content: string | null;
+    url: string | null;
     isFavorite: boolean;
     isPinned: boolean;
     createdAt: Date;
@@ -54,8 +56,6 @@ export interface ItemCollectionSummary {
  */
 export interface ItemDetail extends ItemWithType {
     contentType: "TEXT" | "FILE" | "URL";
-    content: string | null;
-    url: string | null;
     language: string | null;
     updatedAt: Date;
     collections: ItemCollectionSummary[];
@@ -65,6 +65,8 @@ interface PrismaItemWithRelations {
     id: string;
     title: string;
     description: string | null;
+    content: string | null;
+    url: string | null;
     isFavorite: boolean;
     isPinned: boolean;
     createdAt: Date;
@@ -80,6 +82,8 @@ function toItemWithType(item: PrismaItemWithRelations): ItemWithType {
         id: item.id,
         title: item.title,
         description: item.description,
+        content: item.content,
+        url: item.url,
         isFavorite: item.isFavorite,
         isPinned: item.isPinned,
         createdAt: item.createdAt,
