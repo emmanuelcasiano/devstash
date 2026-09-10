@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/db/current-user";
 import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
 import {
+    contentFieldsForType,
     isFileItemType,
     type CreateItemInput,
     type UpdateItemInput,
@@ -219,27 +220,10 @@ export async function getItemById(id: string): Promise<ItemDetail | null> {
     if (!item) return null;
 
     return {
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        isFavorite: item.isFavorite,
-        isPinned: item.isPinned,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        itemType: {
-            id: item.itemType.id,
-            name: item.itemType.name,
-            icon: item.itemType.icon,
-            color: item.itemType.color,
-        },
-        tags: item.tags.map((tag) => tag.name),
+        ...toItemWithType(item),
         contentType: item.contentType,
-        content: item.content,
-        url: item.url,
-        fileUrl: item.fileUrl,
-        fileName: item.fileName,
-        fileSize: item.fileSize,
         language: item.language,
+        updatedAt: item.updatedAt,
         collections: item.collections.map((link) => ({
             id: link.collection.id,
             name: link.collection.name,
@@ -278,9 +262,7 @@ export async function createItem(
         data: {
             title: data.title,
             description: data.description,
-            content: isLink || isFile ? null : data.content,
-            url: isLink ? data.url : null,
-            language: isLink || isFile ? null : data.language,
+            ...contentFieldsForType(data.type, data),
             fileUrl: isFile ? data.fileUrl : null,
             fileName: isFile ? data.fileName : null,
             fileSize: isFile ? data.fileSize : null,
@@ -329,17 +311,12 @@ export async function updateItem(
     });
     if (!owned) return null;
 
-    const isLink = owned.itemType.name === "link";
-    const isFile = isFileItemType(owned.itemType.name);
-
     await prisma.item.update({
         where: { id },
         data: {
             title: data.title,
             description: data.description,
-            content: isLink || isFile ? null : data.content,
-            url: isLink ? data.url : null,
-            language: isLink || isFile ? null : data.language,
+            ...contentFieldsForType(owned.itemType.name, data),
             tags: {
                 set: [],
                 connectOrCreate: data.tags.map((name) => ({

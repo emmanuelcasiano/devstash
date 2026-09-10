@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormError, FormNotice } from "@/components/ui/form-message";
 import {
     AlertDialog,
     AlertDialogClose,
@@ -17,6 +18,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { postJson } from "@/lib/http";
 import {
     MIN_PASSWORD_LENGTH,
     PASSWORD_LENGTH_MESSAGE,
@@ -53,33 +55,21 @@ function ChangePassword() {
         }
 
         setPending(true);
-        try {
-            const response = await fetch("/api/auth/change-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    currentPassword,
-                    newPassword,
-                    confirmPassword,
-                }),
-            });
+        const result = await postJson("/api/auth/change-password", {
+            currentPassword,
+            newPassword,
+            confirmPassword,
+        });
 
-            const data = (await response.json().catch(() => null)) as
-                | { error?: string }
-                | null;
-
-            if (!response.ok) {
-                setError(data?.error ?? "Something went wrong. Please try again.");
-                setPending(false);
-                return;
-            }
-
-            reset();
-            setOpen(false);
-            setSuccess(true);
-        } catch {
-            setError("Something went wrong. Please try again.");
+        if (!result.ok) {
+            setError(result.error ?? "Something went wrong. Please try again.");
+            setPending(false);
+            return;
         }
+
+        reset();
+        setOpen(false);
+        setSuccess(true);
         setPending(false);
     }
 
@@ -104,11 +94,7 @@ function ChangePassword() {
                         Change password
                     </Button>
                 </div>
-                {success && (
-                    <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
-                        Password updated.
-                    </p>
-                )}
+                {success && <FormNotice>Password updated.</FormNotice>}
             </div>
         );
     }
@@ -117,14 +103,7 @@ function ChangePassword() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
             <p className="text-sm font-medium text-foreground">Change password</p>
 
-            {error && (
-                <p
-                    role="alert"
-                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                    {error}
-                </p>
-            )}
+            {error && <FormError>{error}</FormError>}
 
             <div className="flex flex-col gap-2">
                 <Label htmlFor="currentPassword">Current password</Label>
@@ -194,27 +173,18 @@ function DeleteAccount({ email }: { email: string }) {
         if (!canDelete || pending) return;
         setError(null);
         setPending(true);
-        try {
-            const response = await fetch("/api/auth/delete-account", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ confirmation }),
-            });
 
-            if (!response.ok) {
-                const data = (await response.json().catch(() => null)) as
-                    | { error?: string }
-                    | null;
-                setError(data?.error ?? "Something went wrong. Please try again.");
-                setPending(false);
-                return;
-            }
+        const result = await postJson("/api/auth/delete-account", {
+            confirmation,
+        });
 
-            await signOut({ redirectTo: "/sign-in" });
-        } catch {
-            setError("Something went wrong. Please try again.");
+        if (!result.ok) {
+            setError(result.error ?? "Something went wrong. Please try again.");
             setPending(false);
+            return;
         }
+
+        await signOut({ redirectTo: "/sign-in" });
     }
 
     return (

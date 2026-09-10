@@ -1,18 +1,119 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Refactor — Break Up Large Components & Dedupe Shared UI Primitives
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+Pure internal refactor. **No user-facing behavior change** — every screen, form,
+drawer, and interaction must look and behave exactly as it does now. Lint,
+`npm test`, and `npm run build` must pass. Verification is "diff the rendered
+output / click through the flows", not new features.
+
+### 1. Split `src/components/items/ItemDrawer.tsx` (816 lines)
+
+- Extract `useItemDetail(openItemId)` — the `fetch` + `AbortController` +
+  id-tagged `loadedItem` / `errorId` / `reloadKey` / `retry` state — into
+  `src/components/items/use-item-detail.ts`. Keep the `ItemDetailPayload` type
+  and `toPayload()` with the hook (or a small sibling module).
+- Extract `<ItemEditForm item onSaved />` — all edit-mode state (`form`,
+  `updateField`, `startEdit` / `cancelEdit` / `handleSave`) and the edit JSX —
+  into `src/components/items/ItemEditForm.tsx`.
+- Extract `<ItemDetailView item />` — the read-mode Description / Content / Link /
+  File / Tags / Collections / Details sections — into
+  `src/components/items/ItemDetailView.tsx`, with the nested image/file/download
+  block as its own `<ItemFileSection item />`.
+- Extract `<DeleteItemDialog itemId title onDeleted />` — the `AlertDialog` plus
+  `deleteForId` / `deleteError` / `deleting` state and `handleDelete` — into
+  `src/components/items/DeleteItemDialog.tsx`.
+- `ItemDrawer` is left as a ~120-line shell: run the hook, derive
+  `isLoading` / `isError`, render the `Sheet` + skeleton + one sub-view.
+
+### 2. Share the item-form primitives between `ItemDrawer` and `NewItemDialog`
+
+- One `<Field label htmlFor>` in `src/components/ui/field.tsx`; delete both local
+  copies.
+- One `makeFieldUpdater(setForm)` (or `useFormFields`) util for the repeated
+  `updateField(field)` change-handler factory.
+- One shared `ItemFormValues` type + `EMPTY_ITEM_FORM` const
+  (`title/description/content/url/language/tags`).
+- One `<ItemContentField typeName value onChange readOnly />` that owns the
+  `CodeEditor` / `MarkdownEditor` / `Textarea` switch, replacing the ~30
+  near-identical lines in each caller.
+- Move `CONTENT_TYPES` / `LANGUAGE_TYPES` next to `CREATE_ITEM_TYPES` in
+  `src/lib/validation/item.ts` (keep them as string sets; no schema change).
+
+### 3. Shared alert / notice components
+
+- `<FormError>{message}</FormError>` for the
+  `role="alert"` + `border-destructive/40 bg-destructive/10 …` block (8
+  occurrences across SignInForm, RegisterForm, ResetPasswordForm,
+  ForgotPasswordForm, ProfileAccountActions, ItemDrawer ×2, NewItemDialog).
+- `<FormNotice>{message}</FormNotice>` for the `border-border bg-muted/50 …`
+  success banners (SignInForm ×3, ProfileAccountActions).
+- Place in `src/components/ui/` (or `src/components/shared/`).
+
+### 4. `postJson` fetch helper for auth client forms
+
+- `postJson<T>(url, body): Promise<{ ok: boolean; data: T | null; error: string | null }>`
+  in `src/lib/http.ts`, folding the repeated
+  `(await response.json().catch(() => null)) as { error?: string } | null` +
+  `setError(data?.error ?? "…")` dance (6 occurrences across ForgotPasswordForm,
+  SignInForm, RegisterForm, ResetPasswordForm, ProfileAccountActions ×2).
+
+### 5. Split `src/components/auth/SignInForm.tsx` (270 lines)
+
+- Extract `<ResendVerification email />` — `showResend` / `resendPending` /
+  `resendDone` / `resendError` state, `handleResend`, and its JSX block — into
+  its own component, rendered as a sibling.
+- Collapse the three near-identical `justVerified` / `justReset` /
+  `justRegistered` banners onto `<FormNotice>` from goal 3.
+
+### 6. Split `src/components/layout/Sidebar.tsx` (362 lines)
+
+- `<SidebarCollectionLink collection collapsed trailing />` for the repeated
+  `collapsed ? <Tooltip><Link/></Tooltip> : <Link/>` fork (3 call sites: types
+  list aside, favorites, recent).
+- `<SidebarSection title collapsed>` for the repeated `Collapsible` +
+  `CollapsibleTrigger` chrome.
+- One `<SidebarCollectionGroup label items collapsed trailing />` used for both
+  the Favorites and Recent lists (they differ only by the trailing star vs
+  colored dot).
+
+### 7. Smaller dedupe
+
+- `getItemById` in `src/lib/db/items.ts` reuses `toItemWithType(item)` and
+  spreads the extra detail fields instead of re-mapping all 12 shared fields.
+- Extract the `isLink || isFile ? null : …` field-nulling shared by `createItem`
+  and `updateItem` into a `nullifyItemFieldsForType(typeName, data)` helper in
+  the same file.
+- `requireUserId()` + `zodMessage(error)` helpers for the `auth()` guard and
+  `parsed.error.issues.map(i => i.message).join(" ")` repeated 3× in
+  `src/actions/items.ts`.
+- `<StatTile icon color value label />` shared by
+  `src/app/(app)/profile/page.tsx` (2 inline cards) and
+  `src/components/dashboard/StatsCards.tsx`.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Do the goals in order; run `npm run lint` after each group and
+  `npm test` + `npm run build` before committing. Groups are independent enough
+  to land incrementally if the full set gets too large for one pass.
+- Testing scope (per `context/coding-standards.md`): only new **pure utilities**
+  get Vitest coverage. Added: `src/lib/forms.test.ts` (`makeFieldUpdater`, 2
+  cases) and 7 cases in `src/lib/validation/item.test.ts` for
+  `isContentItemType` / `isLanguageItemType` and `contentFieldsForType` (moved
+  from `src/lib/db/items.ts` into the Prisma-free validation module so it can be
+  tested — `src/lib/prisma.ts` throws at import when `DATABASE_URL` is unset, so
+  nothing under `src/lib/db/**` is importable from a test). `postJson` (wraps
+  `fetch`, no mocking harness in the repo) and `zodMessage` (a one-line
+  `.join`) were left uncovered. Extracted React components are out of scope.
+  `npm test` went 7 files / 66 tests → 8 files / 75 tests.
+- No DB migration, no new packages, no new env vars, no route changes expected.
+- Watch the `react-hooks/static-components` and `react-hooks/set-state-in-effect`
+  lint rules that bit earlier drawer work — `useItemDetail` must not `setState`
+  synchronously in the effect body.
 
 ## History
 

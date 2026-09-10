@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    contentFieldsForType,
     createItemSchema,
+    isContentItemType,
+    isLanguageItemType,
     parseTagsInput,
     updateItemSchema,
 } from "@/lib/validation/item";
@@ -281,5 +284,76 @@ describe("parseTagsInput", () => {
     it("returns an empty array for a blank string", () => {
         expect(parseTagsInput("   ")).toEqual([]);
         expect(parseTagsInput("")).toEqual([]);
+    });
+});
+
+describe("isContentItemType / isLanguageItemType", () => {
+    it("treats snippet, prompt, command, and note as content types", () => {
+        for (const type of ["snippet", "prompt", "command", "note"]) {
+            expect(isContentItemType(type)).toBe(true);
+        }
+    });
+
+    it("does not treat link, file, or image as content types", () => {
+        for (const type of ["link", "file", "image"]) {
+            expect(isContentItemType(type)).toBe(false);
+        }
+    });
+
+    it("treats only snippet and command as language types", () => {
+        expect(isLanguageItemType("snippet")).toBe(true);
+        expect(isLanguageItemType("command")).toBe(true);
+        for (const type of ["prompt", "note", "link", "file", "image"]) {
+            expect(isLanguageItemType(type)).toBe(false);
+        }
+    });
+});
+
+describe("contentFieldsForType", () => {
+    const full = {
+        content: "some content",
+        url: "https://example.com",
+        language: "typescript",
+    };
+
+    it("keeps content and language but drops url for a text type", () => {
+        expect(contentFieldsForType("snippet", full)).toEqual({
+            content: "some content",
+            url: null,
+            language: "typescript",
+        });
+        expect(contentFieldsForType("note", full)).toEqual({
+            content: "some content",
+            url: null,
+            language: "typescript",
+        });
+    });
+
+    it("keeps only url for a link", () => {
+        expect(contentFieldsForType("link", full)).toEqual({
+            content: null,
+            url: "https://example.com",
+            language: null,
+        });
+    });
+
+    it("drops all three for file and image types", () => {
+        for (const type of ["file", "image"]) {
+            expect(contentFieldsForType(type, full)).toEqual({
+                content: null,
+                url: null,
+                language: null,
+            });
+        }
+    });
+
+    it("passes null fields through unchanged", () => {
+        expect(
+            contentFieldsForType("command", {
+                content: null,
+                url: null,
+                language: null,
+            }),
+        ).toEqual({ content: null, url: null, language: null });
     });
 });

@@ -9,7 +9,9 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormError, FormNotice } from "@/components/ui/form-message";
 import { GitHubIcon } from "@/components/auth/GitHubIcon";
+import { ResendVerification } from "@/components/auth/ResendVerification";
 import { EMAIL_PATTERN } from "@/lib/validation/auth";
 
 const OAUTH_ERRORS: Record<string, string> = {
@@ -50,14 +52,13 @@ export function SignInForm() {
     const [githubPending, setGithubPending] = useState(false);
 
     const [showResend, setShowResend] = useState(verificationLinkFailed);
-    const [resendPending, setResendPending] = useState(false);
-    const [resendDone, setResendDone] = useState(false);
-    const [resendError, setResendError] = useState<string | null>(null);
+    // Bumped on every sign-in attempt so <ResendVerification> re-mounts fresh.
+    const [resendKey, setResendKey] = useState(0);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError(null);
-        setResendError(null);
+        setResendKey((key) => key + 1);
 
         if (!EMAIL_PATTERN.test(email)) {
             setError("Enter a valid email address.");
@@ -80,7 +81,6 @@ export function SignInForm() {
             if (result?.code === "EmailNotVerified") {
                 setError("Verify your email address before signing in.");
                 setShowResend(true);
-                setResendDone(false);
             } else if (result?.code === "RateLimited") {
                 setError(
                     "Too many sign-in attempts. Please wait a few minutes and try again.",
@@ -101,37 +101,6 @@ export function SignInForm() {
         void signIn("github", { redirectTo: callbackUrl });
     }
 
-    async function handleResend() {
-        setResendError(null);
-
-        if (!EMAIL_PATTERN.test(email)) {
-            setResendError("Enter your email address above first.");
-            return;
-        }
-
-        setResendPending(true);
-        try {
-            const response = await fetch("/api/auth/resend-verification", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
-            });
-            if (!response.ok) {
-                const data = (await response.json().catch(() => null)) as
-                    | { error?: string }
-                    | null;
-                setResendError(
-                    data?.error ?? "Couldn't send the email. Please try again.",
-                );
-            } else {
-                setResendDone(true);
-            }
-        } catch {
-            setResendError("Couldn't send the email. Please try again.");
-        }
-        setResendPending(false);
-    }
-
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2 text-center">
@@ -142,60 +111,24 @@ export function SignInForm() {
             </div>
 
             {justVerified && (
-                <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
-                    Email verified. You can sign in now.
-                </p>
+                <FormNotice>Email verified. You can sign in now.</FormNotice>
             )}
 
             {justReset && (
-                <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
-                    Password updated. You can sign in now.
-                </p>
+                <FormNotice>Password updated. You can sign in now.</FormNotice>
             )}
 
             {justRegistered && (
-                <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground">
+                <FormNotice>
                     {registeredNeedsVerification
                         ? "Account created. Check your email for a verification link to activate it."
                         : "Account created. You can sign in now."}
-                </p>
+                </FormNotice>
             )}
 
-            {error && (
-                <p
-                    role="alert"
-                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                    {error}
-                </p>
-            )}
+            {error && <FormError>{error}</FormError>}
 
-            {showResend && (
-                <div className="flex flex-col gap-1 text-sm">
-                    {resendDone ? (
-                        <p className="text-muted-foreground">
-                            If that account still needs verifying, a new link is
-                            on its way.
-                        </p>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={handleResend}
-                            disabled={resendPending}
-                            className="self-start font-medium text-foreground underline underline-offset-4 disabled:opacity-60"
-                        >
-                            {resendPending
-                                ? "Sending…"
-                                : "Resend verification email"}
-                        </button>
-                    )}
-                    {resendError && (
-                        <p role="alert" className="text-destructive">
-                            {resendError}
-                        </p>
-                    )}
-                </div>
-            )}
+            {showResend && <ResendVerification key={resendKey} email={email} />}
 
             <Button
                 type="button"

@@ -91,6 +91,45 @@ export function isFileItemType(type: string): boolean {
     return (FILE_ITEM_TYPES as readonly string[]).includes(type);
 }
 
+/** Types whose content is authored as text (a textarea / code / markdown editor). */
+export const CONTENT_ITEM_TYPES = [
+    "snippet",
+    "prompt",
+    "command",
+    "note",
+] as const;
+
+export function isContentItemType(type: string): boolean {
+    return (CONTENT_ITEM_TYPES as readonly string[]).includes(type);
+}
+
+/** Types that also carry a free-text `language` for syntax highlighting. */
+export const LANGUAGE_ITEM_TYPES = ["snippet", "command"] as const;
+
+export function isLanguageItemType(type: string): boolean {
+    return (LANGUAGE_ITEM_TYPES as readonly string[]).includes(type);
+}
+
+/**
+ * Forces the fields that don't apply to an item's type to `null` before a
+ * write: a `link` keeps only `url`; `file` / `image` keep none of the three; any
+ * text type keeps `content` / `language` but never `url`. Shared by the
+ * `createItem` and `updateItem` queries so both stay in step; kept here (pure,
+ * Prisma-free) so it can be unit tested.
+ */
+export function contentFieldsForType(
+    typeName: string,
+    data: { content: string | null; url: string | null; language: string | null },
+): { content: string | null; url: string | null; language: string | null } {
+    const isLink = typeName === "link";
+    const isFile = isFileItemType(typeName);
+    return {
+        content: isLink || isFile ? null : data.content,
+        url: isLink ? data.url : null,
+        language: isLink || isFile ? null : data.language,
+    };
+}
+
 /** A non-negative integer byte count, or `null` when absent. */
 const optionalFileSize = z
     .number()

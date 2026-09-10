@@ -1,5 +1,7 @@
 "use server";
 
+import type { ZodError } from "zod";
+
 import { auth } from "@/auth";
 import {
     createItem as createItemQuery,
@@ -14,6 +16,27 @@ export type ActionResult<T> =
     | { success: false; error: string };
 
 /**
+ * Resolves the signed-in user's id, or an `{ error }` describing the failed
+ * action (`verb` is folded into "You must be signed in to <verb>.").
+ */
+async function requireUserId(
+    verb: string,
+): Promise<{ userId: string } | { error: string }> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { error: `You must be signed in to ${verb}.` };
+    }
+    return { userId: session.user.id };
+}
+
+/** Flattens a Zod error into the project's single-string `error` message. */
+function zodMessage(error: ZodError): string {
+    return error.issues.map((issue) => issue.message).join(" ") || "Invalid input.";
+}
+
+const GENERIC_ERROR = "Something went wrong. Please try again.";
+
+/**
  * Creates a new item from the top-bar "New Item" dialog.
  *
  * Follows the project's `{ success, data, error }` contract: the session is
@@ -24,20 +47,12 @@ export type ActionResult<T> =
 export async function createItem(
     input: unknown,
 ): Promise<ActionResult<ItemDetail>> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return {
-            success: false,
-            error: "You must be signed in to create items.",
-        };
-    }
+    const user = await requireUserId("create items");
+    if ("error" in user) return { success: false, error: user.error };
 
     const parsed = createItemSchema.safeParse(input);
     if (!parsed.success) {
-        const message = parsed.error.issues
-            .map((issue) => issue.message)
-            .join(" ");
-        return { success: false, error: message || "Invalid input." };
+        return { success: false, error: zodMessage(parsed.error) };
     }
 
     try {
@@ -48,10 +63,7 @@ export async function createItem(
         return { success: true, data: created };
     } catch (error) {
         console.error("Failed to create item:", error);
-        return {
-            success: false,
-            error: "Something went wrong. Please try again.",
-        };
+        return { success: false, error: GENERIC_ERROR };
     }
 }
 
@@ -68,17 +80,12 @@ export async function updateItem(
     itemId: string,
     input: unknown,
 ): Promise<ActionResult<ItemDetail>> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, error: "You must be signed in to edit items." };
-    }
+    const user = await requireUserId("edit items");
+    if ("error" in user) return { success: false, error: user.error };
 
     const parsed = updateItemSchema.safeParse(input);
     if (!parsed.success) {
-        const message = parsed.error.issues
-            .map((issue) => issue.message)
-            .join(" ");
-        return { success: false, error: message || "Invalid input." };
+        return { success: false, error: zodMessage(parsed.error) };
     }
 
     try {
@@ -89,10 +96,7 @@ export async function updateItem(
         return { success: true, data: updated };
     } catch (error) {
         console.error("Failed to update item:", error);
-        return {
-            success: false,
-            error: "Something went wrong. Please try again.",
-        };
+        return { success: false, error: GENERIC_ERROR };
     }
 }
 
@@ -107,10 +111,8 @@ export async function updateItem(
 export async function deleteItem(
     itemId: string,
 ): Promise<ActionResult<{ id: string }>> {
-    const session = await auth();
-    if (!session?.user?.id) {
-        return { success: false, error: "You must be signed in to delete items." };
-    }
+    const user = await requireUserId("delete items");
+    if ("error" in user) return { success: false, error: user.error };
 
     try {
         const deleted = await deleteItemQuery(itemId);
@@ -120,9 +122,6 @@ export async function deleteItem(
         return { success: true, data: { id: itemId } };
     } catch (error) {
         console.error("Failed to delete item:", error);
-        return {
-            success: false,
-            error: "Something went wrong. Please try again.",
-        };
+        return { success: false, error: GENERIC_ERROR };
     }
 }

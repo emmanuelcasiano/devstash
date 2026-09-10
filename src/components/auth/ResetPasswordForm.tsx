@@ -8,6 +8,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormError } from "@/components/ui/form-message";
+import { postJson } from "@/lib/http";
 import {
     MIN_PASSWORD_LENGTH,
     PASSWORD_LENGTH_MESSAGE,
@@ -40,31 +42,21 @@ export function ResetPasswordForm() {
         }
 
         setPending(true);
-        try {
-            const response = await fetch("/api/auth/reset-password", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token, password, confirmPassword }),
-            });
+        const result = await postJson<{ error?: string; code?: string }>(
+            "/api/auth/reset-password",
+            { token, password, confirmPassword },
+        );
 
-            const data = (await response.json().catch(() => null)) as
-                | { error?: string; code?: string }
-                | null;
-
-            if (!response.ok) {
-                setError(data?.error ?? "Something went wrong. Please try again.");
-                if (data?.code === "InvalidToken") {
-                    setLinkInvalid(true);
-                }
-                setPending(false);
-                return;
+        if (!result.ok) {
+            setError(result.error ?? "Something went wrong. Please try again.");
+            if (result.data?.code === "InvalidToken") {
+                setLinkInvalid(true);
             }
-
-            router.push("/sign-in?reset=1");
-        } catch {
-            setError("Something went wrong. Please try again.");
             setPending(false);
+            return;
         }
+
+        router.push("/sign-in?reset=1");
     }
 
     return (
@@ -76,14 +68,7 @@ export function ResetPasswordForm() {
                 </p>
             </div>
 
-            {error && (
-                <p
-                    role="alert"
-                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                    {error}
-                </p>
-            )}
+            {error && <FormError>{error}</FormError>}
 
             {linkInvalid ? (
                 <p className="text-center text-sm text-muted-foreground">
