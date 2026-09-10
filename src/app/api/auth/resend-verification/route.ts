@@ -6,8 +6,7 @@ import {
   issueAndSendVerificationEmail,
 } from "@/lib/auth/verification";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_PATTERN } from "@/lib/validation/auth";
 
 /**
  * POST /api/auth/resend-verification
@@ -49,10 +48,18 @@ export async function POST(request: Request) {
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (user?.password && !user.emailVerified) {
-      await issueAndSendVerificationEmail({ email, name: user.name, request });
+      // A send failure must not change the response: a 500 here only ever fires
+      // for a registered, unverified address (an unknown one never reaches the
+      // send), which would turn this endpoint into an email-enumeration oracle.
+      // Log and carry on — same as forgot-password.
+      try {
+        await issueAndSendVerificationEmail({ email, name: user.name, request });
+      } catch (error) {
+        console.error("Failed to resend verification email:", error);
+      }
     }
   } catch (error) {
-    console.error("Failed to resend verification email:", error);
+    console.error("Verification resend lookup failed:", error);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
       { status: 500 },

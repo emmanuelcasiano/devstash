@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { getItemsByType } from "@/lib/db/items";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validation/item";
+import { capitalize } from "@/lib/utils";
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ImageCard } from "@/components/items/ImageCard";
@@ -14,15 +15,11 @@ import { NewItemDialog } from "@/components/items/NewItemDialog";
 
 export const dynamic = "force-dynamic";
 
-function toTitleCase(value: string) {
-    return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
 export async function generateMetadata({
     params,
 }: PageProps<"/items/[type]">): Promise<Metadata> {
     const { type } = await params;
-    return { title: `${toTitleCase(type)} · DevStash` };
+    return { title: `${capitalize(type)} · DevStash` };
 }
 
 export default async function ItemsByTypePage({ params }: PageProps<"/items/[type]">) {
@@ -39,7 +36,7 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
     }
 
     const { itemType, items } = result;
-    const label = toTitleCase(itemType.name);
+    const label = capitalize(itemType.name);
     const isImageGallery = itemType.name === "image";
     const isFileList = itemType.name === "file";
     const canCreate = (CREATE_ITEM_TYPES as readonly string[]).includes(

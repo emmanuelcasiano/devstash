@@ -309,6 +309,12 @@ export async function createItem(
  * (or that does not exist) resolves to `null` and nothing is written. Tags are
  * fully replaced — every existing relation is disconnected and the new list is
  * connect-or-created.
+ *
+ * The fields that do not apply to the item's type are forced to `null` on write,
+ * mirroring {@link createItem}: a link never keeps `content` / `language`, a
+ * text type never keeps `url`, and file/image types keep none of the three. The
+ * edit form already sends `null` for hidden fields, so this only hardens the
+ * path against a hand-crafted action call.
  */
 export async function updateItem(
     id: string,
@@ -319,18 +325,21 @@ export async function updateItem(
 
     const owned = await prisma.item.findFirst({
         where: { id, userId },
-        select: { id: true },
+        select: { id: true, itemType: { select: { name: true } } },
     });
     if (!owned) return null;
+
+    const isLink = owned.itemType.name === "link";
+    const isFile = isFileItemType(owned.itemType.name);
 
     await prisma.item.update({
         where: { id },
         data: {
             title: data.title,
             description: data.description,
-            content: data.content,
-            url: data.url,
-            language: data.language,
+            content: isLink || isFile ? null : data.content,
+            url: isLink ? data.url : null,
+            language: isLink || isFile ? null : data.language,
             tags: {
                 set: [],
                 connectOrCreate: data.tags.map((name) => ({

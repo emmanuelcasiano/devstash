@@ -17,8 +17,10 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-const MIN_PASSWORD_LENGTH = 8;
+import {
+    MIN_PASSWORD_LENGTH,
+    PASSWORD_LENGTH_MESSAGE,
+} from "@/lib/validation/auth";
 
 function ChangePassword() {
     const [open, setOpen] = useState(false);
@@ -42,7 +44,7 @@ function ChangePassword() {
         setSuccess(false);
 
         if (newPassword.length < MIN_PASSWORD_LENGTH) {
-            setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+            setError(PASSWORD_LENGTH_MESSAGE);
             return;
         }
         if (newPassword !== confirmPassword) {

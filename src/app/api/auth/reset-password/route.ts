@@ -4,14 +4,16 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset-token";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
+import {
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_LENGTH_MESSAGE,
+} from "@/lib/validation/auth";
 
 interface ResetBody {
   token?: unknown;
   password?: unknown;
   confirmPassword?: unknown;
 }
-
-const MIN_PASSWORD_LENGTH = 8;
 
 /**
  * POST /api/auth/reset-password
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
 
   if (password.length < MIN_PASSWORD_LENGTH) {
     return NextResponse.json(
-      { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` },
+      { error: PASSWORD_LENGTH_MESSAGE },
       { status: 400 },
     );
   }

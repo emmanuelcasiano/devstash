@@ -27,7 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { useSidebar } from "@/components/layout/sidebar-provider";
-import { cn } from "@/lib/utils";
+import { capitalize, cn } from "@/lib/utils";
 
 const RECENT_COLLECTIONS_LIMIT = 5;
 
@@ -97,7 +97,7 @@ export function Sidebar({
                                 const Icon = getItemTypeIcon(type.icon);
                                 const href = `/items/${getItemTypeSlug(type.name)}`;
                                 const isActive = pathname === href;
-                                const label = type.name.charAt(0).toUpperCase() + type.name.slice(1);
+                                const label = capitalize(type.name);
                                 const isPro = isProItemType(type.name);
 
                                 if (collapsed) {

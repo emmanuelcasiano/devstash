@@ -48,7 +48,7 @@ import type { ItemDetail } from "@/lib/db/items";
 import { isCodeItemType } from "@/lib/code-language";
 import { isMarkdownItemType } from "@/lib/markdown-item";
 import { parseTagsInput } from "@/lib/validation/item";
-import { cn, formatFileSize, formatLongDate } from "@/lib/utils";
+import { capitalize, cn, formatFileSize, formatLongDate } from "@/lib/utils";
 
 /** Item detail as it arrives over JSON — the `Date` fields are ISO strings. */
 type ItemDetailPayload = Omit<ItemDetail, "createdAt" | "updatedAt"> & {
@@ -83,10 +83,6 @@ const EMPTY_FORM: EditForm = {
     language: "",
     tags: "",
 };
-
-function capitalize(value: string) {
-    return value.charAt(0).toUpperCase() + value.slice(1);
-}
 
 /** The server action returns `Date` objects; the drawer state holds ISO strings. */
 function toPayload(detail: ItemDetail): ItemDetailPayload {
