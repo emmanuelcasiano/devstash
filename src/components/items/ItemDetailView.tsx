@@ -85,7 +85,7 @@ function ItemFileSection({ item }: { item: ItemDetailPayload }) {
                             <FileIcon className="size-5 text-muted-foreground" />
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">
+                            <p className="wrap-anywhere text-sm font-medium text-foreground">
                                 {item.fileName ?? "Download"}
                             </p>
                             {item.fileSize != null && (
@@ -109,7 +109,7 @@ function ItemFileSection({ item }: { item: ItemDetailPayload }) {
                         Download
                     </a>
                     {isImage && item.fileSize != null && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="min-w-0 wrap-anywhere text-xs text-muted-foreground">
                             {item.fileName ? `${item.fileName} · ` : ""}
                             {formatFileSize(item.fileSize)}
                         </span>

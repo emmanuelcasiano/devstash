@@ -153,7 +153,7 @@ export function FileUpload({ kind, value, onChange, disabled }: FileUploadProps)
                     </div>
                 )}
                 <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
+                    <p className="wrap-anywhere text-sm font-medium text-foreground">
                         {value.fileName}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -178,9 +178,9 @@ export function FileUpload({ kind, value, onChange, disabled }: FileUploadProps)
     if (uploading) {
         return (
             <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                <div className="flex items-center gap-2 text-sm text-foreground">
-                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate">
+                <div className="flex items-start gap-2 text-sm text-foreground">
+                    <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground" />
+                    <span className="min-w-0 flex-1 wrap-anywhere">
                         {pendingName}
                     </span>
                     <span className="shrink-0 text-xs text-muted-foreground">
