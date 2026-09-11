@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { NewCollectionDialog } from "@/components/collections/NewCollectionDialog";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { useSidebar } from "@/components/layout/sidebar-provider";
+import { useCommandPalette } from "@/components/search/command-palette-provider";
 import type { CollectionOption } from "@/lib/db/collections";
 
 export function TopBar({
@@ -15,6 +16,7 @@ export function TopBar({
     collections: CollectionOption[];
 }) {
     const { toggleSidebar } = useSidebar();
+    const { setOpen: setCommandPaletteOpen } = useCommandPalette();
 
     return (
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-4">
@@ -35,7 +37,13 @@ export function TopBar({
             </div>
             <div className="relative w-full max-w-sm">
                 <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input type="search" placeholder="Search items..." className="pl-8" />
+                <Input
+                    type="text"
+                    placeholder="Search items... (⌘K)"
+                    readOnly
+                    onClick={() => setCommandPaletteOpen(true)}
+                    className="cursor-pointer pl-8"
+                />
             </div>
             <div className="flex items-center gap-2">
                 <NewCollectionDialog />

@@ -62,6 +62,13 @@ export interface ItemCollectionSummary {
     name: string;
 }
 
+export interface SearchableItem {
+    id: string;
+    title: string;
+    preview: string | null;
+    itemType: ItemTypeSummary;
+}
+
 /**
  * The full detail view of a single item, as shown in the item drawer. Extends
  * the card-level `ItemWithType` fields with the heavier content that is only
@@ -151,6 +158,49 @@ export async function getRecentItems(limit = 10): Promise<ItemWithType[]> {
     });
 
     return items.map(toItemWithType);
+}
+
+const PREVIEW_MAX_LENGTH = 100;
+
+/** Collapses a value's first line/sentence into a short single-line preview. */
+function buildPreview(value: string | null): string | null {
+    if (!value) return null;
+    const collapsed = value.replace(/\s+/g, " ").trim();
+    if (!collapsed) return null;
+    return collapsed.length > PREVIEW_MAX_LENGTH
+        ? `${collapsed.slice(0, PREVIEW_MAX_LENGTH).trimEnd()}…`
+        : collapsed;
+}
+
+/**
+ * Fetches a lightweight, searchable projection of every item the current user
+ * owns — just enough (title, type, a short content preview) to power the
+ * global command palette's client-side fuzzy search. Pre-fetched once on app
+ * load rather than queried per keystroke.
+ */
+export async function getSearchableItems(): Promise<SearchableItem[]> {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+
+    const items = await prisma.item.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        select: {
+            id: true,
+            title: true,
+            content: true,
+            description: true,
+            url: true,
+            itemType: { select: { id: true, name: true, icon: true, color: true } },
+        },
+    });
+
+    return items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        preview: buildPreview(item.content ?? item.description ?? item.url),
+        itemType: item.itemType,
+    }));
 }
 
 export async function getItemStats(): Promise<ItemStats> {
