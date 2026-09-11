@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/auth";
+import { getCollectionOptions } from "@/lib/db/collections";
 import { getItemsByType } from "@/lib/db/items";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validation/item";
 import { capitalize } from "@/lib/utils";
@@ -30,7 +31,10 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
         redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/items/${type}`)}`);
     }
 
-    const result = await getItemsByType(type);
+    const [result, collectionOptions] = await Promise.all([
+        getItemsByType(type),
+        getCollectionOptions(),
+    ]);
     if (!result) {
         notFound();
     }
@@ -80,6 +84,7 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
                     <NewItemDialog
                         defaultType={itemType.name as CreateItemType}
                         triggerLabel={`New ${label}`}
+                        collections={collectionOptions}
                     />
                 )}
             </div>

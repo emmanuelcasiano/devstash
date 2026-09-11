@@ -7,8 +7,13 @@ import { Input } from "@/components/ui/input";
 import { NewCollectionDialog } from "@/components/collections/NewCollectionDialog";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { useSidebar } from "@/components/layout/sidebar-provider";
+import type { CollectionOption } from "@/lib/db/collections";
 
-export function TopBar() {
+export function TopBar({
+    collections,
+}: {
+    collections: CollectionOption[];
+}) {
     const { toggleSidebar } = useSidebar();
 
     return (
@@ -34,7 +39,7 @@ export function TopBar() {
             </div>
             <div className="flex items-center gap-2">
                 <NewCollectionDialog />
-                <NewItemDialog />
+                <NewItemDialog collections={collections} />
             </div>
         </header>
     );

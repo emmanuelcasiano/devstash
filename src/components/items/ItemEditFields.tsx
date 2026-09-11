@@ -1,11 +1,13 @@
 "use client";
 
+import { CollectionPicker } from "@/components/items/CollectionPicker";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import { DRAWER_CODE_MAX_HEIGHT, type ItemFormValues } from "@/components/items/item-form";
 import { Field } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { CollectionOption } from "@/lib/db/collections";
 import {
     isContentItemType,
     isLanguageItemType,
@@ -22,6 +24,9 @@ export function ItemEditFields({
     formError,
     updateField,
     onContentChange,
+    collections,
+    selectedCollectionIds,
+    onCollectionsChange,
 }: {
     typeName: string;
     form: ItemFormValues;
@@ -32,6 +37,9 @@ export function ItemEditFields({
         event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => void;
     onContentChange: (value: string) => void;
+    collections: CollectionOption[];
+    selectedCollectionIds: string[];
+    onCollectionsChange: (ids: string[]) => void;
 }) {
     const showContentField = isContentItemType(typeName);
     const showLanguageField = isLanguageItemType(typeName);
@@ -105,6 +113,15 @@ export function ItemEditFields({
                 <p className="text-xs text-muted-foreground">
                     Separate tags with commas.
                 </p>
+            </Field>
+
+            <Field label="Collections" htmlFor="item-collections">
+                <CollectionPicker
+                    id="item-collections"
+                    collections={collections}
+                    selectedIds={selectedCollectionIds}
+                    onChange={onCollectionsChange}
+                />
             </Field>
         </>
     );

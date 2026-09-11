@@ -117,6 +117,22 @@ describe("updateItemSchema", () => {
             expect(result.data.tags).toEqual(["react", "hooks"]);
         }
     });
+
+    it("defaults collectionIds to an empty array and de-duplicates when provided", () => {
+        const empty = updateItemSchema.safeParse({ title: "Item", tags: [] });
+        expect(empty.success).toBe(true);
+        if (empty.success) expect(empty.data.collectionIds).toEqual([]);
+
+        const result = updateItemSchema.safeParse({
+            title: "Item",
+            tags: [],
+            collectionIds: ["c1", "c2", "c1"],
+        });
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.collectionIds).toEqual(["c1", "c2"]);
+        }
+    });
 });
 
 describe("createItemSchema", () => {
@@ -264,6 +280,27 @@ describe("createItemSchema", () => {
         expect(result.success).toBe(true);
         if (result.success) {
             expect(result.data.tags).toEqual(["ai", "review"]);
+        }
+    });
+
+    it("defaults collectionIds to an empty array and de-duplicates when provided", () => {
+        const empty = createItemSchema.safeParse({
+            type: "note",
+            title: "Note",
+            tags: [],
+        });
+        expect(empty.success).toBe(true);
+        if (empty.success) expect(empty.data.collectionIds).toEqual([]);
+
+        const result = createItemSchema.safeParse({
+            type: "note",
+            title: "Note",
+            tags: [],
+            collectionIds: ["c1", "c2", "c1"],
+        });
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.collectionIds).toEqual(["c1", "c2"]);
         }
     });
 });

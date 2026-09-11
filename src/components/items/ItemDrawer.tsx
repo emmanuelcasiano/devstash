@@ -26,6 +26,7 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet";
 import { updateItem } from "@/actions/items";
+import type { CollectionOption } from "@/lib/db/collections";
 import { makeFieldUpdater } from "@/lib/forms";
 import {
     isContentItemType,
@@ -34,7 +35,11 @@ import {
 } from "@/lib/validation/item";
 import { capitalize } from "@/lib/utils";
 
-export function ItemDrawer() {
+export function ItemDrawer({
+    collections,
+}: {
+    collections: CollectionOption[];
+}) {
     const { openItemId, closeItem } = useItemDrawer();
     const router = useRouter();
 
@@ -49,6 +54,7 @@ export function ItemDrawer() {
     const [form, setForm] = useState<ItemFormValues>(EMPTY_ITEM_FORM);
     const [formError, setFormError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [collectionIds, setCollectionIds] = useState<string[]>([]);
     const updateField = makeFieldUpdater(setForm);
 
     const isEditing = item !== null && editingId === openItemId;
@@ -65,6 +71,7 @@ export function ItemDrawer() {
             language: item.language ?? "",
             tags: item.tags.join(", "),
         });
+        setCollectionIds(item.collections.map((collection) => collection.id));
         setFormError(null);
         setEditingId(item.id);
     }
@@ -87,6 +94,7 @@ export function ItemDrawer() {
             url: typeName === "link" ? form.url : null,
             language: isLanguageItemType(typeName) ? form.language : null,
             tags: parseTagsInput(form.tags),
+            collectionIds,
         });
 
         setSaving(false);
@@ -225,6 +233,9 @@ export function ItemDrawer() {
                                                 content: value,
                                             }))
                                         }
+                                        collections={collections}
+                                        selectedCollectionIds={collectionIds}
+                                        onCollectionsChange={setCollectionIds}
                                     />
                                 ) : (
                                     <ItemDetailView item={item} />

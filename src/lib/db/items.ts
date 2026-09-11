@@ -96,6 +96,24 @@ function toItemWithType(item: PrismaItemWithRelations): ItemWithType {
     };
 }
 
+/**
+ * Filters a list of collection ids down to the ones the given user actually
+ * owns, so a hand-crafted create/update payload can never link an item into
+ * another user's collection. Skips the query entirely for an empty list.
+ */
+async function resolveOwnedCollectionIds(
+    userId: string,
+    collectionIds: string[],
+): Promise<string[]> {
+    if (collectionIds.length === 0) return [];
+
+    const owned = await prisma.collection.findMany({
+        where: { id: { in: collectionIds }, userId },
+        select: { id: true },
+    });
+    return owned.map((collection) => collection.id);
+}
+
 export async function getPinnedItems(): Promise<ItemWithType[]> {
     const userId = await getCurrentUserId();
     if (!userId) return [];
@@ -257,6 +275,10 @@ export async function createItem(
 
     const isLink = data.type === "link";
     const isFile = isFileItemType(data.type);
+    const collectionIds = await resolveOwnedCollectionIds(
+        userId,
+        data.collectionIds,
+    );
 
     const created = await prisma.item.create({
         data: {
@@ -275,6 +297,9 @@ export async function createItem(
                     create: { name },
                 })),
             },
+            collections: {
+                create: collectionIds.map((collectionId) => ({ collectionId })),
+            },
         },
         select: { id: true },
     });
@@ -284,13 +309,13 @@ export async function createItem(
 
 /**
  * Updates the editable fields of one item (title, description, content, url,
- * language, tags) and returns the refreshed {@link ItemDetail} so the drawer can
- * re-render without a second fetch.
+ * language, tags, collection memberships) and returns the refreshed
+ * {@link ItemDetail} so the drawer can re-render without a second fetch.
  *
  * Scoped to the current user: an item id that the signed-in user does not own
- * (or that does not exist) resolves to `null` and nothing is written. Tags are
- * fully replaced — every existing relation is disconnected and the new list is
- * connect-or-created.
+ * (or that does not exist) resolves to `null` and nothing is written. Tags and
+ * collection memberships are both fully replaced — every existing relation is
+ * removed and the new list is written in its place.
  *
  * The fields that do not apply to the item's type are forced to `null` on write,
  * mirroring {@link createItem}: a link never keeps `content` / `language`, a
@@ -311,6 +336,11 @@ export async function updateItem(
     });
     if (!owned) return null;
 
+    const collectionIds = await resolveOwnedCollectionIds(
+        userId,
+        data.collectionIds,
+    );
+
     await prisma.item.update({
         where: { id },
         data: {
@@ -323,6 +353,10 @@ export async function updateItem(
                     where: { name },
                     create: { name },
                 })),
+            },
+            collections: {
+                deleteMany: {},
+                create: collectionIds.map((collectionId) => ({ collectionId })),
             },
         },
     });

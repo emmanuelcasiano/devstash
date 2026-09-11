@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { createItem } from "@/actions/items";
+import { CollectionPicker } from "@/components/items/CollectionPicker";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import {
@@ -38,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getItemTypeColor } from "@/lib/constants/item-types";
+import type { CollectionOption } from "@/lib/db/collections";
 import { makeFieldUpdater } from "@/lib/forms";
 import {
     isContentItemType,
@@ -66,18 +68,22 @@ interface NewItemDialogProps {
     defaultType?: CreateItemType;
     /** Trigger button text. Defaults to "New Item". */
     triggerLabel?: string;
+    /** The current user's collections, for the collection picker. */
+    collections: CollectionOption[];
 }
 
 export function NewItemDialog({
     defaultType = DEFAULT_TYPE,
     triggerLabel = "New Item",
-}: NewItemDialogProps = {}) {
+    collections,
+}: NewItemDialogProps) {
     const router = useRouter();
 
     const [open, setOpen] = useState(false);
     const [type, setType] = useState<CreateItemType>(defaultType);
     const [form, setForm] = useState<ItemFormValues>(EMPTY_ITEM_FORM);
     const [upload, setUpload] = useState<UploadedFile | null>(null);
+    const [collectionIds, setCollectionIds] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const updateField = makeFieldUpdater(setForm);
@@ -97,6 +103,7 @@ export function NewItemDialog({
         setType(defaultType);
         setForm(EMPTY_ITEM_FORM);
         setUpload(null);
+        setCollectionIds([]);
         setError(null);
     }
 
@@ -125,6 +132,7 @@ export function NewItemDialog({
             url: showUrlField ? form.url : null,
             language: showLanguageField ? form.language : null,
             tags: parseTagsInput(form.tags),
+            collectionIds,
             fileUrl: isFileType ? (upload?.fileUrl ?? null) : null,
             fileName: isFileType ? (upload?.fileName ?? null) : null,
             fileSize: isFileType ? (upload?.fileSize ?? null) : null,
@@ -292,6 +300,16 @@ export function NewItemDialog({
                         <p className="text-xs text-muted-foreground">
                             Separate tags with commas.
                         </p>
+                    </Field>
+
+                    <Field label="Collections" htmlFor="new-item-collections">
+                        <CollectionPicker
+                            id="new-item-collections"
+                            collections={collections}
+                            selectedIds={collectionIds}
+                            onChange={setCollectionIds}
+                            disabled={submitting}
+                        />
                     </Field>
 
                     <div className="flex items-center justify-end gap-2">

@@ -55,6 +55,17 @@ const tagList = z
         return [...seen];
     });
 
+/**
+ * De-duplicated list of collection ids to assign the item to. An empty list is
+ * valid — an item does not have to belong to any collection. Ownership of each
+ * id is enforced separately by the `src/lib/db/items.ts` queries, which drop
+ * any id that does not belong to the current user before writing.
+ */
+const collectionIdList = z
+    .array(z.string())
+    .default([])
+    .transform((ids) => [...new Set(ids)]);
+
 export const updateItemSchema = z.object({
     title: z.string().trim().min(1, "Title is required."),
     description: optionalText,
@@ -62,6 +73,7 @@ export const updateItemSchema = z.object({
     url: optionalUrl,
     language: optionalText,
     tags: tagList,
+    collectionIds: collectionIdList,
 });
 
 /** The normalized payload after {@link updateItemSchema} has parsed the input. */
@@ -149,6 +161,7 @@ export const createItemSchema = z
         url: optionalUrl,
         language: optionalText,
         tags: tagList,
+        collectionIds: collectionIdList,
         fileUrl: optionalUrl,
         fileName: optionalText,
         fileSize: optionalFileSize,

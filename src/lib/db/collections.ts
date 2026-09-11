@@ -28,6 +28,29 @@ export interface CollectionStats {
     favoriteCollections: number;
 }
 
+export interface CollectionOption {
+    id: string;
+    name: string;
+}
+
+/**
+ * The current user's collections as lightweight `{id, name}` options, sorted
+ * alphabetically, for the item create/edit collection picker. A dedicated query
+ * rather than deriving from {@link getRecentCollections} — that function's
+ * `limit` and heavy `items` include exist for the sidebar/dashboard, not for
+ * populating a picker with every collection the user has.
+ */
+export async function getCollectionOptions(): Promise<CollectionOption[]> {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+
+    return prisma.collection.findMany({
+        where: { userId },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+    });
+}
+
 export async function getRecentCollections(limit = 6): Promise<CollectionWithStats[]> {
     const userId = await getCurrentUserId();
     if (!userId) return [];

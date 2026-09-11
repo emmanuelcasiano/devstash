@@ -1,18 +1,22 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Add Item to Collection(s)
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Users can assign an item to one or more collections directly from the item forms.
+- The New Item dialog (`NewItemDialog.tsx`) gets a collection-picker input listing the user's existing collections, allowing zero, one, or multiple selections.
+- The item drawer's edit mode (`ItemEditFields.tsx` / `ItemDrawer.tsx`) gets the same collection-picker input, pre-populated with the item's current collection memberships, and saving updates the item's collection assignments.
+- Selecting zero collections is valid (an item doesn't have to belong to any collection).
+- Does NOT include building out `/collections/[id]` or any other collection-detail/browsing page — this feature is scoped to the input control on the item forms only.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Data model: `ItemCollection` is the existing many-to-many join table (`itemId`, `collectionId`, `addedAt`) between `Item` and `Collection` — no schema/migration change expected, this is wiring existing structure into the create/update flows.
+- Follows the established patterns in the codebase: `src/lib/validation/item.ts` (Zod schemas), `src/lib/db/items.ts` (`createItem`/`updateItem` queries), `src/actions/items.ts` (server actions), and the `CollectionWithStats`-style query pattern in `src/lib/db/collections.ts` for listing the user's collections to populate the picker.
+- Should reuse the shared `Field` / form primitives already extracted in the large-component refactor rather than introducing new one-off patterns.
 
 ## History
 
