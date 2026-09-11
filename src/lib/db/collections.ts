@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/db/current-user";
-import type { CreateCollectionInput } from "@/lib/validation/collection";
+import type {
+    CreateCollectionInput,
+    UpdateCollectionInput,
+} from "@/lib/validation/collection";
 
 /** Fallback border colour for a collection with no items to derive one from. */
 const DEFAULT_COLLECTION_COLOR = "#6b7280";
@@ -51,6 +54,66 @@ export async function getCollectionOptions(): Promise<CollectionOption[]> {
     });
 }
 
+interface PrismaCollectionWithItems {
+    id: string;
+    name: string;
+    description: string | null;
+    isFavorite: boolean;
+    createdAt: Date;
+    items: Array<{ item: { itemType: { id: string; name: string; icon: string; color: string } } }>;
+}
+
+/**
+ * Maps a Prisma collection (with its items' item types included) into the
+ * {@link CollectionWithStats} shape — an item count, a border color derived
+ * from the most-used item type, and the distinct list of type icons present.
+ * Shared by {@link getRecentCollections} and {@link updateCollection} so both
+ * compute stats the same way.
+ */
+function toCollectionWithStats(collection: PrismaCollectionWithItems): CollectionWithStats {
+    const typeCounts = new Map<string, { type: CollectionTypeSummary; count: number }>();
+
+    for (const { item } of collection.items) {
+        const entry = typeCounts.get(item.itemType.id);
+        if (entry) {
+            entry.count += 1;
+        } else {
+            typeCounts.set(item.itemType.id, {
+                type: {
+                    id: item.itemType.id,
+                    name: item.itemType.name,
+                    icon: item.itemType.icon,
+                    color: item.itemType.color,
+                },
+                count: 1,
+            });
+        }
+    }
+
+    const sortedTypes = [...typeCounts.values()].sort((a, b) => b.count - a.count);
+
+    return {
+        id: collection.id,
+        name: collection.name,
+        description: collection.description,
+        isFavorite: collection.isFavorite,
+        itemCount: collection.items.length,
+        createdAt: collection.createdAt,
+        color: sortedTypes[0]?.type.color ?? DEFAULT_COLLECTION_COLOR,
+        types: sortedTypes.map((entry) => entry.type),
+    };
+}
+
+const COLLECTION_WITH_ITEMS_INCLUDE = {
+    items: {
+        include: {
+            item: {
+                include: { itemType: true },
+            },
+        },
+    },
+} as const;
+
 /**
  * Fetches the current user's collections, newest first, each with an item
  * count, a border color derived from its most-used item type, and the distinct
@@ -66,50 +129,10 @@ export async function getRecentCollections(limit?: number): Promise<CollectionWi
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: limit,
-        include: {
-            items: {
-                include: {
-                    item: {
-                        include: { itemType: true },
-                    },
-                },
-            },
-        },
+        include: COLLECTION_WITH_ITEMS_INCLUDE,
     });
 
-    return collections.map((collection) => {
-        const typeCounts = new Map<string, { type: CollectionTypeSummary; count: number }>();
-
-        for (const { item } of collection.items) {
-            const entry = typeCounts.get(item.itemType.id);
-            if (entry) {
-                entry.count += 1;
-            } else {
-                typeCounts.set(item.itemType.id, {
-                    type: {
-                        id: item.itemType.id,
-                        name: item.itemType.name,
-                        icon: item.itemType.icon,
-                        color: item.itemType.color,
-                    },
-                    count: 1,
-                });
-            }
-        }
-
-        const sortedTypes = [...typeCounts.values()].sort((a, b) => b.count - a.count);
-
-        return {
-            id: collection.id,
-            name: collection.name,
-            description: collection.description,
-            isFavorite: collection.isFavorite,
-            itemCount: collection.items.length,
-            createdAt: collection.createdAt,
-            color: sortedTypes[0]?.type.color ?? DEFAULT_COLLECTION_COLOR,
-            types: sortedTypes.map((entry) => entry.type),
-        };
-    });
+    return collections.map(toCollectionWithStats);
 }
 
 /**
@@ -153,6 +176,60 @@ export async function createCollection(
         color: DEFAULT_COLLECTION_COLOR,
         types: [],
     };
+}
+
+/**
+ * Updates one collection's name/description. Scoped to the current user via
+ * an ownership `findFirst` before writing, so a foreign or unknown id updates
+ * nothing and returns `null` — the caller treats that as "not found".
+ */
+export async function updateCollection(
+    id: string,
+    data: UpdateCollectionInput,
+): Promise<CollectionWithStats | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const existing = await prisma.collection.findFirst({
+        where: { id, userId },
+        select: { id: true },
+    });
+    if (!existing) return null;
+
+    const updated = await prisma.collection.update({
+        where: { id },
+        data: {
+            name: data.name,
+            description: data.description,
+        },
+        include: COLLECTION_WITH_ITEMS_INCLUDE,
+    });
+
+    return toCollectionWithStats(updated);
+}
+
+/**
+ * Deletes one collection. Scoped to the current user via an ownership
+ * `findFirst` before deleting, so a foreign or unknown id deletes nothing and
+ * returns `false`.
+ *
+ * Only the collection row and its `ItemCollection` membership rows (cascaded
+ * by the schema's `onDelete: Cascade` on `ItemCollection.collection`) are
+ * removed — the collection's items are untouched, they simply stop belonging
+ * to this collection.
+ */
+export async function deleteCollection(id: string): Promise<boolean> {
+    const userId = await getCurrentUserId();
+    if (!userId) return false;
+
+    const existing = await prisma.collection.findFirst({
+        where: { id, userId },
+        select: { id: true },
+    });
+    if (!existing) return false;
+
+    await prisma.collection.delete({ where: { id } });
+    return true;
 }
 
 export async function getCollectionStats(): Promise<CollectionStats> {
