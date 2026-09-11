@@ -1,10 +1,9 @@
 import { getRecentItems } from "@/lib/db/items";
+import { DASHBOARD_RECENT_ITEMS_LIMIT } from "@/lib/constants/pagination";
 import { ItemRow } from "@/components/dashboard/ItemRow";
 
-const RECENT_ITEMS_LIMIT = 10;
-
 export async function RecentItems() {
-    const recentItems = await getRecentItems(RECENT_ITEMS_LIMIT);
+    const recentItems = await getRecentItems(DASHBOARD_RECENT_ITEMS_LIMIT);
 
     return (
         <section className="flex flex-col gap-3">

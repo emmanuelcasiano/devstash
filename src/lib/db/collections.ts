@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/db/current-user";
+import { COLLECTIONS_PER_PAGE } from "@/lib/constants/pagination";
+import { getPageRange } from "@/lib/pagination";
 import type {
     CreateCollectionInput,
     UpdateCollectionInput,
@@ -34,6 +36,11 @@ export interface CollectionStats {
 export interface CollectionOption {
     id: string;
     name: string;
+}
+
+export interface PaginatedCollections {
+    collections: CollectionWithStats[];
+    totalCount: number;
 }
 
 /**
@@ -133,6 +140,31 @@ export async function getRecentCollections(limit?: number): Promise<CollectionWi
     });
 
     return collections.map(toCollectionWithStats);
+}
+
+/**
+ * Fetches one page of the current user's collections, newest first, in the
+ * same {@link CollectionWithStats} shape as {@link getRecentCollections}, for
+ * the `/collections` page. `page` is 1-based; only that page's rows are
+ * fetched (`COLLECTIONS_PER_PAGE` each), alongside a total count.
+ */
+export async function getPaginatedCollections(page = 1): Promise<PaginatedCollections> {
+    const userId = await getCurrentUserId();
+    if (!userId) return { collections: [], totalCount: 0 };
+
+    const { skip, take } = getPageRange(page, COLLECTIONS_PER_PAGE);
+    const [collections, totalCount] = await Promise.all([
+        prisma.collection.findMany({
+            where: { userId },
+            orderBy: { createdAt: "desc" },
+            skip,
+            take,
+            include: COLLECTION_WITH_ITEMS_INCLUDE,
+        }),
+        prisma.collection.count({ where: { userId } }),
+    ]);
+
+    return { collections: collections.map(toCollectionWithStats), totalCount };
 }
 
 /**

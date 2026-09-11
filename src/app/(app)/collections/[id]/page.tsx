@@ -5,10 +5,13 @@ import { ArrowLeft, Folder, Star } from "lucide-react";
 
 import { auth } from "@/auth";
 import { getItemsByCollection } from "@/lib/db/items";
+import { ITEMS_PER_PAGE } from "@/lib/constants/pagination";
+import { getTotalPages, parsePageParam } from "@/lib/pagination";
 import { CollectionDetailActions } from "@/components/collections/CollectionDetailActions";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ImageCard } from "@/components/items/ImageCard";
 import { FileRow } from "@/components/items/FileRow";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 
 export const metadata: Metadata = {
     title: "Collection · DevStash",
@@ -18,20 +21,24 @@ export const dynamic = "force-dynamic";
 
 export default async function CollectionDetailPage({
     params,
+    searchParams,
 }: PageProps<"/collections/[id]">) {
     const { id } = await params;
+    const { page: pageParam } = await searchParams;
+    const page = parsePageParam(pageParam);
 
     const session = await auth();
     if (!session?.user) {
         redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/collections/${id}`)}`);
     }
 
-    const result = await getItemsByCollection(id);
+    const result = await getItemsByCollection(id, page);
     if (!result) {
         notFound();
     }
 
-    const { collection, items } = result;
+    const { collection, items, totalCount } = result;
+    const totalPages = getTotalPages(totalCount, ITEMS_PER_PAGE);
     const imageItems = items.filter((item) => item.itemType.name === "image");
     const fileItems = items.filter((item) => item.itemType.name === "file");
     const otherItems = items.filter(
@@ -64,8 +71,8 @@ export default async function CollectionDetailPage({
                                 )}
                             </div>
                             <p className="text-sm text-muted-foreground">
-                                {items.length}{" "}
-                                {items.length === 1 ? "item" : "items"}
+                                {totalCount}{" "}
+                                {totalCount === 1 ? "item" : "items"}
                             </p>
                         </div>
                     </div>
@@ -78,7 +85,7 @@ export default async function CollectionDetailPage({
                 )}
             </div>
 
-            {items.length === 0 ? (
+            {totalCount === 0 ? (
                 <p className="text-sm text-muted-foreground">
                     No items in this collection yet.
                 </p>
@@ -126,6 +133,12 @@ export default async function CollectionDetailPage({
                             </div>
                         </section>
                     )}
+
+                    <PaginationControls
+                        basePath={`/collections/${id}`}
+                        currentPage={page}
+                        totalPages={totalPages}
+                    />
                 </>
             )}
         </div>

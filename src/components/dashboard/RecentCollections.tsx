@@ -1,12 +1,11 @@
 import Link from "next/link";
 
 import { getRecentCollections } from "@/lib/db/collections";
+import { DASHBOARD_COLLECTIONS_LIMIT } from "@/lib/constants/pagination";
 import { CollectionCard } from "@/components/dashboard/CollectionCard";
 
-const RECENT_COLLECTIONS_LIMIT = 6;
-
 export async function RecentCollections() {
-    const recentCollections = await getRecentCollections(RECENT_COLLECTIONS_LIMIT);
+    const recentCollections = await getRecentCollections(DASHBOARD_COLLECTIONS_LIMIT);
 
     return (
         <section className="flex flex-col gap-3">

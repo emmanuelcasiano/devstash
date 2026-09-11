@@ -8,11 +8,14 @@ import { getCollectionOptions } from "@/lib/db/collections";
 import { getItemsByType } from "@/lib/db/items";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validation/item";
 import { capitalize } from "@/lib/utils";
+import { ITEMS_PER_PAGE } from "@/lib/constants/pagination";
+import { getTotalPages, parsePageParam } from "@/lib/pagination";
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ImageCard } from "@/components/items/ImageCard";
 import { FileRow } from "@/components/items/FileRow";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +26,13 @@ export async function generateMetadata({
     return { title: `${capitalize(type)} · DevStash` };
 }
 
-export default async function ItemsByTypePage({ params }: PageProps<"/items/[type]">) {
+export default async function ItemsByTypePage({
+    params,
+    searchParams,
+}: PageProps<"/items/[type]">) {
     const { type } = await params;
+    const { page: pageParam } = await searchParams;
+    const page = parsePageParam(pageParam);
 
     const session = await auth();
     if (!session?.user) {
@@ -32,14 +40,15 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
     }
 
     const [result, collectionOptions] = await Promise.all([
-        getItemsByType(type),
+        getItemsByType(type, page),
         getCollectionOptions(),
     ]);
     if (!result) {
         notFound();
     }
 
-    const { itemType, items } = result;
+    const { itemType, items, totalCount } = result;
+    const totalPages = getTotalPages(totalCount, ITEMS_PER_PAGE);
     const label = capitalize(itemType.name);
     const isImageGallery = itemType.name === "image";
     const isFileList = itemType.name === "file";
@@ -74,8 +83,8 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
                             {label}s
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {items.length}{" "}
-                            {items.length === 1 ? "item" : "items"}
+                            {totalCount}{" "}
+                            {totalCount === 1 ? "item" : "items"}
                         </p>
                     </div>
                 </div>
@@ -89,32 +98,42 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
                 )}
             </div>
 
-            {items.length === 0 ? (
+            {totalCount === 0 ? (
                 <p className="text-sm text-muted-foreground">
                     No {label.toLowerCase()} items yet.
                 </p>
-            ) : isFileList ? (
-                <div className="overflow-hidden rounded-xl border border-border">
-                    <ul className="divide-y divide-border">
-                        {items.map((item) => (
-                            <li key={item.id}>
-                                <FileRow item={item} />
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            ) : isImageGallery ? (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                    {items.map((item) => (
-                        <ImageCard key={item.id} item={item} />
-                    ))}
-                </div>
             ) : (
-                <div className="grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {items.map((item) => (
-                        <ItemCard key={item.id} item={item} />
-                    ))}
-                </div>
+                <>
+                    {isFileList ? (
+                        <div className="overflow-hidden rounded-xl border border-border">
+                            <ul className="divide-y divide-border">
+                                {items.map((item) => (
+                                    <li key={item.id}>
+                                        <FileRow item={item} />
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : isImageGallery ? (
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                            {items.map((item) => (
+                                <ImageCard key={item.id} item={item} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {items.map((item) => (
+                                <ItemCard key={item.id} item={item} />
+                            ))}
+                        </div>
+                    )}
+
+                    <PaginationControls
+                        basePath={`/items/${type}`}
+                        currentPage={page}
+                        totalPages={totalPages}
+                    />
+                </>
             )}
         </div>
     );

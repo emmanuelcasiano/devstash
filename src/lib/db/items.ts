@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/db/current-user";
 import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
+import { ITEMS_PER_PAGE } from "@/lib/constants/pagination";
+import { getPageRange } from "@/lib/pagination";
 import {
     contentFieldsForType,
     isFileItemType,
@@ -43,6 +45,7 @@ export interface ItemTypeWithCount extends ItemTypeSummary {
 export interface ItemsByType {
     itemType: ItemTypeSummary;
     items: ItemWithType[];
+    totalCount: number;
 }
 
 export interface CollectionSummary {
@@ -55,6 +58,7 @@ export interface CollectionSummary {
 export interface ItemsByCollection {
     collection: CollectionSummary;
     items: ItemWithType[];
+    totalCount: number;
 }
 
 export interface ItemCollectionSummary {
@@ -241,14 +245,21 @@ export async function getItemTypesWithCounts(): Promise<ItemTypeWithCount[]> {
 }
 
 /**
- * Fetches the current user's items for a single system item type, newest first.
+ * Fetches one page of the current user's items for a single system item type,
+ * newest first.
  *
  * `typeSlug` comes from the `/items/[type]` route. System type names are stored
  * singular (`snippet`, `note`, …), so a trailing "s" is also accepted so that
  * both `/items/snippet` (the sidebar links) and `/items/snippets` resolve.
  * Returns `null` when the slug matches no system type so the page can 404.
+ *
+ * `page` is 1-based; only that page's rows are fetched (`ITEMS_PER_PAGE` each),
+ * alongside a total count for the caller to compute page count from.
  */
-export async function getItemsByType(typeSlug: string): Promise<ItemsByType | null> {
+export async function getItemsByType(
+    typeSlug: string,
+    page = 1,
+): Promise<ItemsByType | null> {
     const normalized = typeSlug.toLowerCase();
     const candidates =
         normalized.length > 1 && normalized.endsWith("s")
@@ -268,52 +279,61 @@ export async function getItemsByType(typeSlug: string): Promise<ItemsByType | nu
     };
 
     const userId = await getCurrentUserId();
-    if (!userId) return { itemType, items: [] };
+    if (!userId) return { itemType, items: [], totalCount: 0 };
 
-    const items = await prisma.item.findMany({
-        where: { userId, itemTypeId: type.id },
-        orderBy: { createdAt: "desc" },
-        include: { itemType: true, tags: true },
-    });
+    const { skip, take } = getPageRange(page, ITEMS_PER_PAGE);
+    const [items, totalCount] = await Promise.all([
+        prisma.item.findMany({
+            where: { userId, itemTypeId: type.id },
+            orderBy: { createdAt: "desc" },
+            skip,
+            take,
+            include: { itemType: true, tags: true },
+        }),
+        prisma.item.count({ where: { userId, itemTypeId: type.id } }),
+    ]);
 
-    return { itemType, items: items.map(toItemWithType) };
+    return { itemType, items: items.map(toItemWithType), totalCount };
 }
 
 /**
- * Fetches one collection's items, newest first, for the `/collections/[id]`
- * page. Scoped to the current user via a single `Collection.findFirst` with a
- * nested `items` include, so an id that exists but belongs to another user
+ * Fetches one page of one collection's items, newest first, for the
+ * `/collections/[id]` page. Scoped to the current user via an ownership
+ * `Collection.findFirst`, so an id that exists but belongs to another user
  * resolves to `null` — the same as an unknown id, which the page maps to a 404.
+ *
+ * `page` is 1-based; only that page's rows are fetched (`ITEMS_PER_PAGE` each)
+ * via the `ItemCollection` join table directly, alongside a total count.
  */
 export async function getItemsByCollection(
     collectionId: string,
+    page = 1,
 ): Promise<ItemsByCollection | null> {
     const userId = await getCurrentUserId();
     if (!userId) return null;
 
     const collection = await prisma.collection.findFirst({
         where: { id: collectionId, userId },
-        select: {
-            id: true,
-            name: true,
-            description: true,
-            isFavorite: true,
-            items: {
-                orderBy: { item: { createdAt: "desc" } },
-                include: { item: { include: { itemType: true, tags: true } } },
-            },
-        },
+        select: { id: true, name: true, description: true, isFavorite: true },
     });
     if (!collection) return null;
 
+    const { skip, take } = getPageRange(page, ITEMS_PER_PAGE);
+    const [links, totalCount] = await Promise.all([
+        prisma.itemCollection.findMany({
+            where: { collectionId },
+            orderBy: { item: { createdAt: "desc" } },
+            skip,
+            take,
+            include: { item: { include: { itemType: true, tags: true } } },
+        }),
+        prisma.itemCollection.count({ where: { collectionId } }),
+    ]);
+
     return {
-        collection: {
-            id: collection.id,
-            name: collection.name,
-            description: collection.description,
-            isFavorite: collection.isFavorite,
-        },
-        items: collection.items.map((link) => toItemWithType(link.item)),
+        collection,
+        items: links.map((link) => toItemWithType(link.item)),
+        totalCount,
     };
 }
 
