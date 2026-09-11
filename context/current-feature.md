@@ -1,18 +1,21 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Collections Pages
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Build `/collections`: a page listing all of the current user's collections, reusing the existing `CollectionCard` component (same card used on the dashboard's Recent Collections grid).
+- Build `/collections/[id]`: a page showing the items that belong to one collection, reusing the existing item cards from `/items/[type]` (`ItemCard` for text/link types, `ImageCard` for images, `FileRow` for files) rather than inventing new card markup.
+- The sidebar's "View all collections" link and every collection card (dashboard grid, sidebar Favorites/Recent rows) already point at `/collections` and `/collections/[id]` respectively — those routes currently 404. No link changes should be needed; verify they resolve once the pages exist.
+- An unknown/foreign collection id on `/collections/[id]` should 404, consistent with `/items/[type]`.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Follow the same server-component + `auth()` self-guard pattern as `/items/[type]/page.tsx` (redirect to `/sign-in?callbackUrl=...` when signed out, `notFound()` for an unknown/foreign id).
+- `src/lib/db/collections.ts` has `getRecentCollections(limit)` (heavier, includes items/types, used by the dashboard and sidebar) and the new `getCollectionOptions()` (lightweight `{id,name}`, used by the collection picker) — neither is quite right for these two pages as-is; expect to add purpose-built queries (e.g. one for the full collections list, one for a single collection's items scoped to the current user) rather than overloading the existing ones.
+- Item type dispatch for `/collections/[id]`'s card grid (ItemCard vs ImageCard vs FileRow) should mirror the logic already in `/items/[type]/page.tsx`.
 
 ## History
 

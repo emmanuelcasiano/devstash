@@ -51,7 +51,14 @@ export async function getCollectionOptions(): Promise<CollectionOption[]> {
     });
 }
 
-export async function getRecentCollections(limit = 6): Promise<CollectionWithStats[]> {
+/**
+ * Fetches the current user's collections, newest first, each with an item
+ * count, a border color derived from its most-used item type, and the distinct
+ * list of type icons present. Pass `limit` to cap the result (the dashboard's
+ * Recent Collections grid, the sidebar); omit it for the full list (the
+ * `/collections` page).
+ */
+export async function getRecentCollections(limit?: number): Promise<CollectionWithStats[]> {
     const userId = await getCurrentUserId();
     if (!userId) return [];
 

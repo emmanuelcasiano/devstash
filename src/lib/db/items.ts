@@ -45,6 +45,18 @@ export interface ItemsByType {
     items: ItemWithType[];
 }
 
+export interface CollectionSummary {
+    id: string;
+    name: string;
+    description: string | null;
+    isFavorite: boolean;
+}
+
+export interface ItemsByCollection {
+    collection: CollectionSummary;
+    items: ItemWithType[];
+}
+
 export interface ItemCollectionSummary {
     id: string;
     name: string;
@@ -215,6 +227,44 @@ export async function getItemsByType(typeSlug: string): Promise<ItemsByType | nu
     });
 
     return { itemType, items: items.map(toItemWithType) };
+}
+
+/**
+ * Fetches one collection's items, newest first, for the `/collections/[id]`
+ * page. Scoped to the current user via a single `Collection.findFirst` with a
+ * nested `items` include, so an id that exists but belongs to another user
+ * resolves to `null` — the same as an unknown id, which the page maps to a 404.
+ */
+export async function getItemsByCollection(
+    collectionId: string,
+): Promise<ItemsByCollection | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const collection = await prisma.collection.findFirst({
+        where: { id: collectionId, userId },
+        select: {
+            id: true,
+            name: true,
+            description: true,
+            isFavorite: true,
+            items: {
+                orderBy: { item: { createdAt: "desc" } },
+                include: { item: { include: { itemType: true, tags: true } } },
+            },
+        },
+    });
+    if (!collection) return null;
+
+    return {
+        collection: {
+            id: collection.id,
+            name: collection.name,
+            description: collection.description,
+            isFavorite: collection.isFavorite,
+        },
+        items: collection.items.map((link) => toItemWithType(link.item)),
+    };
 }
 
 /**
