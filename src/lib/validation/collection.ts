@@ -23,3 +23,9 @@ export const createCollectionSchema = z.object({
 
 /** The normalized payload after {@link createCollectionSchema} has parsed the input. */
 export type CreateCollectionInput = z.infer<typeof createCollectionSchema>;
+
+/** Editing a collection's metadata shares the same shape as creating one. */
+export const updateCollectionSchema = createCollectionSchema;
+
+/** The normalized payload after {@link updateCollectionSchema} has parsed the input. */
+export type UpdateCollectionInput = z.infer<typeof updateCollectionSchema>;

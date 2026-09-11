@@ -5,6 +5,7 @@ import { ArrowLeft, Folder, Star } from "lucide-react";
 
 import { auth } from "@/auth";
 import { getItemsByCollection } from "@/lib/db/items";
+import { CollectionDetailActions } from "@/components/collections/CollectionDetailActions";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ImageCard } from "@/components/items/ImageCard";
 import { FileRow } from "@/components/items/FileRow";
@@ -48,24 +49,27 @@ export default async function CollectionDetailPage({
             </Link>
 
             <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                        <Folder className="size-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-1.5">
-                            <h1 className="text-2xl font-bold text-foreground">
-                                {collection.name}
-                            </h1>
-                            {collection.isFavorite && (
-                                <Star className="size-4 shrink-0 fill-yellow-400 text-yellow-400" />
-                            )}
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                            <Folder className="size-5 text-muted-foreground" />
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            {items.length}{" "}
-                            {items.length === 1 ? "item" : "items"}
-                        </p>
+                        <div>
+                            <div className="flex items-center gap-1.5">
+                                <h1 className="text-2xl font-bold text-foreground">
+                                    {collection.name}
+                                </h1>
+                                {collection.isFavorite && (
+                                    <Star className="size-4 shrink-0 fill-yellow-400 text-yellow-400" />
+                                )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                {items.length}{" "}
+                                {items.length === 1 ? "item" : "items"}
+                            </p>
+                        </div>
                     </div>
+                    <CollectionDetailActions collection={collection} />
                 </div>
                 {collection.description && (
                     <p className="text-sm text-muted-foreground">
