@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * The row of actions shown under the title in the item drawer's read view:
- * Favorite / Pin (display-only for now), Copy (wired), Edit, and Delete.
+ * Favorite, Pin, Copy, Edit, and Delete.
  *
  * `copied` is local and self-resets after 1.5s; give this component a
  * `key={item.id}` so it starts fresh when the drawer switches items.
@@ -17,11 +17,13 @@ import { cn } from "@/lib/utils";
 export function ItemActionBar({
     item,
     onToggleFavorite,
+    onTogglePin,
     onEdit,
     onDelete,
 }: {
     item: ItemDetailPayload;
     onToggleFavorite: () => void;
+    onTogglePin: () => void;
     onEdit: () => void;
     onDelete: () => void;
 }) {
@@ -52,7 +54,7 @@ export function ItemActionBar({
                 />
                 Favorite
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={onTogglePin}>
                 <Pin className={cn("size-4", item.isPinned && "fill-current")} />
                 Pin
             </Button>

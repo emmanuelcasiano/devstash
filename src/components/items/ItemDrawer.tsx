@@ -25,7 +25,7 @@ import {
     SheetDescription,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { toggleItemFavorite, updateItem } from "@/actions/items";
+import { toggleItemFavorite, toggleItemPin, updateItem } from "@/actions/items";
 import type { CollectionOption } from "@/lib/db/collections";
 import { makeFieldUpdater } from "@/lib/forms";
 import {
@@ -122,6 +122,25 @@ export function ItemDrawer({
         }
 
         setItem(toPayload(result.data));
+        router.refresh();
+    }
+
+    async function handleTogglePin() {
+        if (!item) return;
+
+        const previous = item;
+        setItem({ ...item, isPinned: !item.isPinned });
+
+        const result = await toggleItemPin(item.id);
+
+        if (!result.success) {
+            setItem(previous);
+            toast.error(result.error);
+            return;
+        }
+
+        setItem(toPayload(result.data));
+        toast.success(result.data.isPinned ? "Item pinned." : "Item unpinned.");
         router.refresh();
     }
 
@@ -227,6 +246,7 @@ export function ItemDrawer({
                                         key={item.id}
                                         item={item}
                                         onToggleFavorite={handleToggleFavorite}
+                                        onTogglePin={handleTogglePin}
                                         onEdit={startEdit}
                                         onDelete={() => setDeleteForId(item.id)}
                                     />

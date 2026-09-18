@@ -1,18 +1,22 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Pinned Items
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Create a `toggleItemPin` server action (mirrors the existing `toggleItemFavorite` pattern)
+- Make the Pin button in `ItemDrawer` clickable (currently rendered with no `onClick`)
+- Optimistic UI updates for instant feedback when toggling pin state
+- Toast notification on success/error
+- Pinned items sort to the top of listings
+- Follow the existing Favorite Button pattern (query + action + wiring)
 
 ## Notes
 
-<!-- Any extra notes -->
+- Items only — collections are not pinnable.
+- The Pin icon on `ItemCard` remains a static indicator (no toggle control there).
 
 ## History
 

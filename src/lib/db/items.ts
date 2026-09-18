@@ -179,7 +179,7 @@ export async function getRecentItems(limit = 10): Promise<ItemWithType[]> {
 
     const items = await prisma.item.findMany({
         where: { userId },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
         take: limit,
         include: { itemType: true, tags: true },
     });
@@ -308,7 +308,7 @@ export async function getItemsByType(
     const [items, totalCount] = await Promise.all([
         prisma.item.findMany({
             where: { userId, itemTypeId: type.id },
-            orderBy: { createdAt: "desc" },
+            orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
             skip,
             take,
             include: { itemType: true, tags: true },
@@ -345,7 +345,7 @@ export async function getItemsByCollection(
     const [links, totalCount] = await Promise.all([
         prisma.itemCollection.findMany({
             where: { collectionId },
-            orderBy: { item: { createdAt: "desc" } },
+            orderBy: [{ item: { isPinned: "desc" } }, { item: { createdAt: "desc" } }],
             skip,
             take,
             include: { item: { include: { itemType: true, tags: true } } },
@@ -569,6 +569,32 @@ export async function toggleItemFavorite(id: string): Promise<ItemDetail | null>
     await prisma.item.update({
         where: { id },
         data: { isFavorite: !owned.isFavorite },
+    });
+
+    return getItemById(id);
+}
+
+/**
+ * Flips one item's `isPinned` flag.
+ *
+ * Scoped to the current user: an item id the signed-in user does not own (or
+ * that does not exist) resolves to `null` and nothing is written. Returns the
+ * refreshed {@link ItemDetail} so callers can update their view without a
+ * second fetch.
+ */
+export async function toggleItemPin(id: string): Promise<ItemDetail | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const owned = await prisma.item.findFirst({
+        where: { id, userId },
+        select: { isPinned: true },
+    });
+    if (!owned) return null;
+
+    await prisma.item.update({
+        where: { id },
+        data: { isPinned: !owned.isPinned },
     });
 
     return getItemById(id);

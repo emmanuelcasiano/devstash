@@ -10,6 +10,7 @@ import {
     createItem as createItemQuery,
     deleteItem as deleteItemQuery,
     toggleItemFavorite as toggleItemFavoriteQuery,
+    toggleItemPin as toggleItemPinQuery,
     updateItem as updateItemQuery,
     type ItemDetail,
 } from "@/lib/db/items";
@@ -131,6 +132,33 @@ export async function toggleItemFavorite(
         return { success: true, data: updated };
     } catch (error) {
         console.error("Failed to toggle item favorite:", error);
+        return { success: false, error: GENERIC_ERROR };
+    }
+}
+
+/**
+ * Flips one item's pinned status from the drawer's action bar.
+ *
+ * Follows the project's `{ success, data, error }` contract: the session is
+ * checked with `auth()` and ownership is enforced by the scoped query, so an
+ * item id the signed-in user does not own resolves to "not found". On success
+ * the refreshed `ItemDetail` is returned so the caller can update its view
+ * without a re-fetch.
+ */
+export async function toggleItemPin(
+    itemId: string,
+): Promise<ActionResult<ItemDetail>> {
+    const user = await requireUserId("pin items");
+    if ("error" in user) return { success: false, error: user.error };
+
+    try {
+        const updated = await toggleItemPinQuery(itemId);
+        if (!updated) {
+            return { success: false, error: "Item not found." };
+        }
+        return { success: true, data: updated };
+    } catch (error) {
+        console.error("Failed to toggle item pin:", error);
         return { success: false, error: GENERIC_ERROR };
     }
 }
