@@ -9,22 +9,31 @@ import { ItemDrawerProvider } from "@/components/items/item-drawer-provider";
 import { ItemDrawer } from "@/components/items/ItemDrawer";
 import { CommandPaletteProvider } from "@/components/search/command-palette-provider";
 import { CommandPalette } from "@/components/search/CommandPalette";
+import { EditorPreferencesProvider } from "@/components/editor/editor-preferences-provider";
 import { getCollectionOptions, getRecentCollections } from "@/lib/db/collections";
 import { getItemTypesWithCounts, getSearchableItems } from "@/lib/db/items";
+import { getEditorPreferences } from "@/lib/db/user";
 
 export const dynamic = "force-dynamic";
 
 const SIDEBAR_COLLECTIONS_LIMIT = 50;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [session, itemTypes, allCollections, collectionOptions, searchableItems] =
-    await Promise.all([
-      auth(),
-      getItemTypesWithCounts(),
-      getRecentCollections(),
-      getCollectionOptions(),
-      getSearchableItems(),
-    ]);
+  const [
+    session,
+    itemTypes,
+    allCollections,
+    collectionOptions,
+    searchableItems,
+    editorPreferences,
+  ] = await Promise.all([
+    auth(),
+    getItemTypesWithCounts(),
+    getRecentCollections(),
+    getCollectionOptions(),
+    getSearchableItems(),
+    getEditorPreferences(),
+  ]);
   const collections = allCollections.slice(0, SIDEBAR_COLLECTIONS_LIMIT);
 
   // Defense-in-depth: `/dashboard` protection would otherwise rest solely on the
@@ -37,23 +46,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = session.user;
 
   return (
-    <SidebarProvider>
-      <ItemDrawerProvider>
-        <CommandPaletteProvider>
-          <div className="flex h-screen flex-col overflow-hidden">
-            <TopBar collections={collectionOptions} />
-            <div className="flex min-h-0 flex-1">
-              <SidebarAside itemTypes={itemTypes} collections={collections} user={user} />
-              <SidebarMobile itemTypes={itemTypes} collections={collections} user={user} />
-              <main className="flex-1 overflow-y-auto">
-                <div className="mx-auto w-full max-w-6xl p-4 md:p-6">{children}</div>
-              </main>
+    <EditorPreferencesProvider initialPreferences={editorPreferences}>
+      <SidebarProvider>
+        <ItemDrawerProvider>
+          <CommandPaletteProvider>
+            <div className="flex h-screen flex-col overflow-hidden">
+              <TopBar collections={collectionOptions} />
+              <div className="flex min-h-0 flex-1">
+                <SidebarAside itemTypes={itemTypes} collections={collections} user={user} />
+                <SidebarMobile itemTypes={itemTypes} collections={collections} user={user} />
+                <main className="flex-1 overflow-y-auto">
+                  <div className="mx-auto w-full max-w-6xl p-4 md:p-6">{children}</div>
+                </main>
+              </div>
             </div>
-          </div>
-          <ItemDrawer collections={collectionOptions} />
-          <CommandPalette items={searchableItems} collections={allCollections} />
-        </CommandPaletteProvider>
-      </ItemDrawerProvider>
-    </SidebarProvider>
+            <ItemDrawer collections={collectionOptions} />
+            <CommandPalette items={searchableItems} collections={allCollections} />
+          </CommandPaletteProvider>
+        </ItemDrawerProvider>
+      </SidebarProvider>
+    </EditorPreferencesProvider>
   );
 }

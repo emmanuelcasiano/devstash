@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { getProfileUser } from "@/lib/db/user";
 import { AccountActions } from "@/components/settings/AccountActions";
+import { EditorPreferencesSettings } from "@/components/settings/EditorPreferencesSettings";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
@@ -35,6 +36,15 @@ export default async function SettingsPage() {
                 <ArrowLeft className="size-4" />
                 Back to dashboard
             </Link>
+
+            <section className="flex flex-col gap-4">
+                <h2 className="text-sm font-medium text-muted-foreground">Editor</h2>
+                <Card>
+                    <CardContent>
+                        <EditorPreferencesSettings />
+                    </CardContent>
+                </Card>
+            </section>
 
             <section className="flex flex-col gap-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Account</h2>
