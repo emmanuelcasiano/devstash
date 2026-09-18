@@ -1,8 +1,9 @@
 "use client";
 
-import { Layers, PanelLeft, Search } from "lucide-react";
+import Link from "next/link";
+import { Layers, PanelLeft, Search, Star } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NewCollectionDialog } from "@/components/collections/NewCollectionDialog";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
@@ -46,6 +47,13 @@ export function TopBar({
                 />
             </div>
             <div className="flex items-center gap-2">
+                <Link
+                    href="/favorites"
+                    aria-label="Favorites"
+                    className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+                >
+                    <Star className="size-4" />
+                </Link>
                 <NewCollectionDialog />
                 <NewItemDialog collections={collections} />
             </div>

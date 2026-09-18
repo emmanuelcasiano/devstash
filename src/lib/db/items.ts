@@ -150,6 +150,29 @@ export async function getPinnedItems(): Promise<ItemWithType[]> {
     return items.map(toItemWithType);
 }
 
+export interface FavoriteItem extends ItemWithType {
+    updatedAt: Date;
+}
+
+/**
+ * Fetches every item the current user has favorited, most recently favorited
+ * first. There is no dedicated "favorited at" timestamp, so `updatedAt` is
+ * used as the proxy per the favorites-spec — toggling `isFavorite` bumps it
+ * like any other field update.
+ */
+export async function getFavoriteItems(): Promise<FavoriteItem[]> {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+
+    const items = await prisma.item.findMany({
+        where: { userId, isFavorite: true },
+        orderBy: { updatedAt: "desc" },
+        include: { itemType: true, tags: true },
+    });
+
+    return items.map((item) => ({ ...toItemWithType(item), updatedAt: item.updatedAt }));
+}
+
 export async function getRecentItems(limit = 10): Promise<ItemWithType[]> {
     const userId = await getCurrentUserId();
     if (!userId) return [];

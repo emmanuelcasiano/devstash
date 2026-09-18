@@ -61,6 +61,40 @@ export async function getCollectionOptions(): Promise<CollectionOption[]> {
     });
 }
 
+export interface FavoriteCollection {
+    id: string;
+    name: string;
+    description: string | null;
+    itemCount: number;
+    updatedAt: Date;
+}
+
+/**
+ * Fetches every collection the current user has favorited, most recently
+ * favorited first (using `updatedAt` as a proxy — there is no dedicated
+ * "favorited at" timestamp, so toggling `isFavorite` bumps it like any other
+ * field update). A lighter query than {@link getRecentCollections}: just the
+ * item count via `_count`, no per-item-type breakdown.
+ */
+export async function getFavoriteCollections(): Promise<FavoriteCollection[]> {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+
+    const collections = await prisma.collection.findMany({
+        where: { userId, isFavorite: true },
+        orderBy: { updatedAt: "desc" },
+        include: { _count: { select: { items: true } } },
+    });
+
+    return collections.map((collection) => ({
+        id: collection.id,
+        name: collection.name,
+        description: collection.description,
+        itemCount: collection._count.items,
+        updatedAt: collection.updatedAt,
+    }));
+}
+
 interface PrismaCollectionWithItems {
     id: string;
     name: string;
