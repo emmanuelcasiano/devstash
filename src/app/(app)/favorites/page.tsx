@@ -5,8 +5,8 @@ import { Star } from "lucide-react";
 import { auth } from "@/auth";
 import { getFavoriteCollections } from "@/lib/db/collections";
 import { getFavoriteItems } from "@/lib/db/items";
-import { FavoriteItemRow } from "@/components/favorites/FavoriteItemRow";
-import { FavoriteCollectionRow } from "@/components/favorites/FavoriteCollectionRow";
+import { FavoriteItemsSection } from "@/components/favorites/FavoriteItemsSection";
+import { FavoriteCollectionsSection } from "@/components/favorites/FavoriteCollectionsSection";
 
 export const dynamic = "force-dynamic";
 
@@ -45,33 +45,10 @@ export default async function FavoritesPage() {
                 </div>
             ) : (
                 <div className="flex flex-col gap-6">
-                    {items.length > 0 && (
-                        <section>
-                            <h2 className="px-3 pb-1 font-mono text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                Items ({items.length})
-                            </h2>
-                            <div className="divide-y divide-border/60 rounded-lg border border-border/60">
-                                {items.map((item) => (
-                                    <FavoriteItemRow key={item.id} item={item} />
-                                ))}
-                            </div>
-                        </section>
-                    )}
+                    {items.length > 0 && <FavoriteItemsSection items={items} />}
 
                     {collections.length > 0 && (
-                        <section>
-                            <h2 className="px-3 pb-1 font-mono text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                Collections ({collections.length})
-                            </h2>
-                            <div className="divide-y divide-border/60 rounded-lg border border-border/60">
-                                {collections.map((collection) => (
-                                    <FavoriteCollectionRow
-                                        key={collection.id}
-                                        collection={collection}
-                                    />
-                                ))}
-                            </div>
-                        </section>
+                        <FavoriteCollectionsSection collections={collections} />
                     )}
                 </div>
             )}

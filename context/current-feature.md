@@ -1,18 +1,25 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Favorites Page Client-Side Sorting
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add client-side sorting controls to `/favorites` for both the Items and Collections sections.
+- Support sorting by:
+  - Name (alphabetical, A→Z / Z→A)
+  - Date (using `updatedAt`, the same "favorited at" proxy the page already sorts by server-side)
+  - Item type (grouped/sorted by `itemType.name`) — items section only, since collections have no type
+- Sorting happens entirely client-side after the existing server-rendered data loads (no new queries, no page reload).
+- Preserve existing behavior when no sort option is chosen (default: current `updatedAt` desc order from the server).
 
 ## Notes
 
-<!-- Any extra notes -->
+- `/favorites` (`src/app/(app)/favorites/page.tsx`) is currently a server component; `FavoriteItemRow`/`FavoriteCollectionRow` are the row renderers. Sorting will need a client wrapper/component around each list since the page itself fetches server-side.
+- Items sort by name/date/type; Collections sort by name/date only (no `itemType` concept for collections).
+- No DB migration, no new server actions expected — this is pure client-side array sorting over already-fetched data.
+- No `context/features/` spec file exists for this — inline request, so goals were generated from the description above.
 
 ## History
 
