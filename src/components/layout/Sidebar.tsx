@@ -9,6 +9,7 @@ import {
     Folder,
     LogOut,
     PanelLeft,
+    Settings,
     Star,
     UserRound,
 } from "lucide-react";
@@ -402,6 +403,10 @@ export function Sidebar({
                         <DropdownMenuItem render={<Link href="/profile" />}>
                             <UserRound />
                             Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem render={<Link href="/settings" />}>
+                            <Settings />
+                            Settings
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             variant="destructive"

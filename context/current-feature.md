@@ -1,18 +1,22 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Settings Page
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+Implemented — pending review/test/complete
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add a new `/settings` page, protected the same way `/profile` is (server-side `auth()` guard redirecting to `/sign-in?callbackUrl=/settings` for signed-out users), rendered inside the shared `(app)` layout chrome (TopBar + Sidebar).
+- Add a "Settings" link to the user-icon dropdown menu at the bottom of the sidebar (`Sidebar.tsx`), alongside the existing "Profile" link and "Sign out" item.
+- Move the existing "Account" section (currently on `/profile`, rendered via `ProfileAccountActions` — Change Password + Delete Account) from the Profile page to the new Settings page.
+- `/profile` keeps the user info + usage stats sections; the Account section (and its heading/card) is removed from `/profile` and relocated to `/settings`.
 
 ## Notes
 
-<!-- Any extra notes -->
+- The request mentions "forgot password" as one of the actions to move, but the current `ProfileAccountActions` component only contains **Change Password** and **Delete Account** — there is no separate "forgot password" action on the profile page (password reset is a signed-out flow reached from the sign-in page via `/forgot-password`). Interpreting this as moving the existing Change Password + Delete Account block; will confirm with the user at `start` if this reading seems wrong.
+- `ProfileAccountActions.tsx` (`src/components/profile/`) can likely be moved/renamed into a new `src/components/settings/` directory rather than left under `profile/`, since it's no longer used there — decide exact placement during implementation.
+- Follow the same self-guard pattern as `/profile` (`auth()` → redirect if no session, then redirect again if the profile-user lookup somehow returns null) and the same `force-dynamic` + `Metadata` title pattern.
+- Sidebar dropdown: insert the new "Settings" `DropdownMenuItem` (a `Settings`/gear icon from lucide-react) near the existing "Profile" item, before the destructive "Sign out" item.
 
 ## History
 

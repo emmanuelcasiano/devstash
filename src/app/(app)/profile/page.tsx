@@ -11,7 +11,6 @@ import { getItemTypeIcon } from "@/lib/constants/item-types";
 import { formatLongDate } from "@/lib/utils";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { StatTile } from "@/components/shared/StatTile";
-import { ProfileAccountActions } from "@/components/profile/ProfileAccountActions";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
@@ -109,19 +108,6 @@ export default async function ProfilePage() {
                                 );
                             })}
                         </ul>
-                    </CardContent>
-                </Card>
-            </section>
-
-            {/* Account actions */}
-            <section className="flex flex-col gap-4">
-                <h2 className="text-sm font-medium text-muted-foreground">Account</h2>
-                <Card>
-                    <CardContent>
-                        <ProfileAccountActions
-                            email={user.email}
-                            hasPassword={user.hasPassword}
-                        />
                     </CardContent>
                 </Card>
             </section>

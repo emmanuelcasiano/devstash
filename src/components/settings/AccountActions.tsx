@@ -260,7 +260,7 @@ function DeleteAccount({ email }: { email: string }) {
     );
 }
 
-export function ProfileAccountActions({
+export function AccountActions({
     email,
     hasPassword,
 }: {
