@@ -9,6 +9,7 @@ import {
 import {
     createCollection as createCollectionQuery,
     deleteCollection as deleteCollectionQuery,
+    toggleCollectionFavorite as toggleCollectionFavoriteQuery,
     updateCollection as updateCollectionQuery,
     type CollectionWithStats,
 } from "@/lib/db/collections";
@@ -108,6 +109,34 @@ export async function deleteCollection(
         return { success: true, data: { id: collectionId } };
     } catch (error) {
         console.error("Failed to delete collection:", error);
+        return { success: false, error: GENERIC_ERROR };
+    }
+}
+
+/**
+ * Flips one collection's favorite status from a card's favorite toggle, its
+ * actions menu, or the collection detail page.
+ *
+ * Follows the project's `{ success, data, error }` contract: the session is
+ * checked with `auth()` and ownership is enforced by the scoped query, so a
+ * collection id the signed-in user does not own resolves to "not found". On
+ * success the refreshed {@link CollectionWithStats} is returned so the caller
+ * can update its view without a re-fetch.
+ */
+export async function toggleCollectionFavorite(
+    collectionId: string,
+): Promise<ActionResult<CollectionWithStats>> {
+    const user = await requireUserId("favorite collections");
+    if ("error" in user) return { success: false, error: user.error };
+
+    try {
+        const updated = await toggleCollectionFavoriteQuery(collectionId);
+        if (!updated) {
+            return { success: false, error: "Collection not found." };
+        }
+        return { success: true, data: updated };
+    } catch (error) {
+        console.error("Failed to toggle collection favorite:", error);
         return { success: false, error: GENERIC_ERROR };
     }
 }

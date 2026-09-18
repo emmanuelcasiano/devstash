@@ -9,16 +9,20 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 /**
  * 3-dot menu shown on a collection card: Edit and Delete open the dialogs the
- * parent owns; Favorite is a presentational placeholder only — no handler, no
- * server action — favoriting a collection isn't implemented yet.
+ * parent owns; Favorite toggles the collection's favorite status.
  */
 export function CollectionActionsMenu({
+    isFavorite,
+    onToggleFavorite,
     onEdit,
     onDelete,
 }: {
+    isFavorite: boolean;
+    onToggleFavorite: () => void;
     onEdit: () => void;
     onDelete: () => void;
 }) {
@@ -46,8 +50,17 @@ export function CollectionActionsMenu({
                     <Pencil />
                     Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(event) => event.stopPropagation()}>
-                    <Star />
+                <DropdownMenuItem
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleFavorite();
+                    }}
+                >
+                    <Star
+                        className={cn(
+                            isFavorite && "fill-yellow-400 text-yellow-400",
+                        )}
+                    />
                     Favorite
                 </DropdownMenuItem>
                 <DropdownMenuItem

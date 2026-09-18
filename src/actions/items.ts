@@ -9,6 +9,7 @@ import {
 import {
     createItem as createItemQuery,
     deleteItem as deleteItemQuery,
+    toggleItemFavorite as toggleItemFavoriteQuery,
     updateItem as updateItemQuery,
     type ItemDetail,
 } from "@/lib/db/items";
@@ -102,6 +103,34 @@ export async function deleteItem(
         return { success: true, data: { id: itemId } };
     } catch (error) {
         console.error("Failed to delete item:", error);
+        return { success: false, error: GENERIC_ERROR };
+    }
+}
+
+/**
+ * Flips one item's favorite status from the drawer's action bar or a card's
+ * favorite toggle.
+ *
+ * Follows the project's `{ success, data, error }` contract: the session is
+ * checked with `auth()` and ownership is enforced by the scoped query, so an
+ * item id the signed-in user does not own resolves to "not found". On success
+ * the refreshed `ItemDetail` is returned so the caller can update its view
+ * without a re-fetch.
+ */
+export async function toggleItemFavorite(
+    itemId: string,
+): Promise<ActionResult<ItemDetail>> {
+    const user = await requireUserId("favorite items");
+    if ("error" in user) return { success: false, error: user.error };
+
+    try {
+        const updated = await toggleItemFavoriteQuery(itemId);
+        if (!updated) {
+            return { success: false, error: "Item not found." };
+        }
+        return { success: true, data: updated };
+    } catch (error) {
+        console.error("Failed to toggle item favorite:", error);
         return { success: false, error: GENERIC_ERROR };
     }
 }

@@ -298,6 +298,34 @@ export async function deleteCollection(id: string): Promise<boolean> {
     return true;
 }
 
+/**
+ * Flips one collection's `isFavorite` flag. Scoped to the current user via an
+ * ownership `findFirst` before writing, so a foreign or unknown id resolves
+ * to `null` and nothing is written. Returns the refreshed
+ * {@link CollectionWithStats} so callers can update their view without a
+ * second fetch.
+ */
+export async function toggleCollectionFavorite(
+    id: string,
+): Promise<CollectionWithStats | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const existing = await prisma.collection.findFirst({
+        where: { id, userId },
+        select: { isFavorite: true },
+    });
+    if (!existing) return null;
+
+    const updated = await prisma.collection.update({
+        where: { id },
+        data: { isFavorite: !existing.isFavorite },
+        include: COLLECTION_WITH_ITEMS_INCLUDE,
+    });
+
+    return toCollectionWithStats(updated);
+}
+
 export async function getCollectionStats(): Promise<CollectionStats> {
     const userId = await getCurrentUserId();
     if (!userId) return { totalCollections: 0, favoriteCollections: 0 };

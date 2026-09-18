@@ -25,7 +25,7 @@ import {
     SheetDescription,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { updateItem } from "@/actions/items";
+import { toggleItemFavorite, updateItem } from "@/actions/items";
 import type { CollectionOption } from "@/lib/db/collections";
 import { makeFieldUpdater } from "@/lib/forms";
 import {
@@ -108,6 +108,20 @@ export function ItemDrawer({
         setItem(toPayload(result.data));
         setEditingId(null);
         toast.success("Item updated.");
+        router.refresh();
+    }
+
+    async function handleToggleFavorite() {
+        if (!item) return;
+
+        const result = await toggleItemFavorite(item.id);
+
+        if (!result.success) {
+            toast.error(result.error);
+            return;
+        }
+
+        setItem(toPayload(result.data));
         router.refresh();
     }
 
@@ -212,6 +226,7 @@ export function ItemDrawer({
                                     <ItemActionBar
                                         key={item.id}
                                         item={item}
+                                        onToggleFavorite={handleToggleFavorite}
                                         onEdit={startEdit}
                                         onDelete={() => setDeleteForId(item.id)}
                                     />

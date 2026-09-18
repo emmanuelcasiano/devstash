@@ -16,10 +16,12 @@ import { cn } from "@/lib/utils";
  */
 export function ItemActionBar({
     item,
+    onToggleFavorite,
     onEdit,
     onDelete,
 }: {
     item: ItemDetailPayload;
+    onToggleFavorite: () => void;
     onEdit: () => void;
     onDelete: () => void;
 }) {
@@ -41,7 +43,7 @@ export function ItemActionBar({
 
     return (
         <div className="flex items-center gap-0.5">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={onToggleFavorite}>
                 <Star
                     className={cn(
                         "size-4",

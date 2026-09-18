@@ -547,3 +547,29 @@ export async function deleteItem(id: string): Promise<boolean> {
 
     return true;
 }
+
+/**
+ * Flips one item's `isFavorite` flag.
+ *
+ * Scoped to the current user: an item id the signed-in user does not own (or
+ * that does not exist) resolves to `null` and nothing is written. Returns the
+ * refreshed {@link ItemDetail} so callers can update their view without a
+ * second fetch.
+ */
+export async function toggleItemFavorite(id: string): Promise<ItemDetail | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+
+    const owned = await prisma.item.findFirst({
+        where: { id, userId },
+        select: { isFavorite: true },
+    });
+    if (!owned) return null;
+
+    await prisma.item.update({
+        where: { id },
+        data: { isFavorite: !owned.isFavorite },
+    });
+
+    return getItemById(id);
+}

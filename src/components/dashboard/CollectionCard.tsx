@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Star } from "lucide-react";
 
 import { CollectionActionsMenu } from "@/components/collections/CollectionActionsMenu";
 import { DeleteCollectionDialog } from "@/components/collections/DeleteCollectionDialog";
 import { EditCollectionDialog } from "@/components/collections/EditCollectionDialog";
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
+import { toggleCollectionFavorite } from "@/actions/collections";
 import type { CollectionWithStats } from "@/lib/db/collections";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -15,6 +17,29 @@ export function CollectionCard({ collection }: { collection: CollectionWithStats
     const router = useRouter();
     const [editOpen, setEditOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [isFavorite, setIsFavorite] = useState(collection.isFavorite);
+    const [togglingFavorite, setTogglingFavorite] = useState(false);
+
+    async function handleToggleFavorite(event?: React.MouseEvent) {
+        event?.stopPropagation();
+        if (togglingFavorite) return;
+
+        setTogglingFavorite(true);
+        const previous = isFavorite;
+        setIsFavorite(!previous);
+
+        const result = await toggleCollectionFavorite(collection.id);
+        setTogglingFavorite(false);
+
+        if (!result.success) {
+            setIsFavorite(previous);
+            toast.error(result.error);
+            return;
+        }
+
+        setIsFavorite(result.data.isFavorite);
+        router.refresh();
+    }
 
     return (
         <div className="group relative h-full">
@@ -30,7 +55,7 @@ export function CollectionCard({ collection }: { collection: CollectionWithStats
                     <CardContent className="flex flex-col gap-3 py-4">
                         <div className="flex items-center gap-1.5 pr-6">
                             <h3 className="truncate font-medium text-foreground">{collection.name}</h3>
-                            {collection.isFavorite && (
+                            {isFavorite && (
                                 <Star className="size-3.5 shrink-0 fill-yellow-400 text-yellow-400" />
                             )}
                         </div>
@@ -55,6 +80,8 @@ export function CollectionCard({ collection }: { collection: CollectionWithStats
 
             <div className="absolute top-2.5 right-1.5 z-10">
                 <CollectionActionsMenu
+                    isFavorite={isFavorite}
+                    onToggleFavorite={handleToggleFavorite}
                     onEdit={() => setEditOpen(true)}
                     onDelete={() => setDeleteOpen(true)}
                 />

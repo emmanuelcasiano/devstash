@@ -1,18 +1,27 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Favorite Toggle (Drawer, Collection Page, Cards)
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Wire up the item drawer's existing Favorite (star) button in `ItemActionBar.tsx` so clicking it actually toggles `Item.isFavorite`, instead of only changing the icon's fill color with no persistence.
+- Add a `toggleItemFavorite(itemId)` server action (and underlying `src/lib/db/items.ts` query) that flips `isFavorite` for an item the current user owns, following the existing `ActionResult<T>` / `requireUserId` pattern used by `updateItem`/`deleteItem`.
+- Add the equivalent for collections: wire up the existing, currently-unhandled Favorite menu item in `CollectionActionsMenu.tsx` (used by `CollectionCard.tsx`'s dropdown) and the Favorite button in `CollectionDetailActions.tsx` (used on `/collections/[id]`) to a new `toggleCollectionFavorite(collectionId)` action + `src/lib/db/collections.ts` query.
+- Add a favorite toggle affordance directly on cards, not just inside the drawer/menus:
+  - `ItemCard.tsx` (used on `/items/[type]` and mixed-type sections of `/collections/[id]`) gets a favorite star toggle, alongside its existing hover-revealed quick-copy button.
+  - `CollectionCard.tsx` gets a favorite star toggle on the card itself (currently favoriting a collection is only reachable through the 3-dot menu).
+- All toggle points must reflect the current `isFavorite` state (filled/yellow when favorited) and update it optimistically or via `router.refresh()` after the server action resolves, consistent with how `DeleteItemDialog`/`EditCollectionDialog` already refresh after their actions.
+- Toggling favorite status from a card or the drawer must not also trigger the card/row's "open" navigation or drawer-open behavior (event propagation must be stopped, matching the existing quick-copy button's `event.stopPropagation()` pattern on `ItemCard`).
+- Existing surfaces that already show `isFavorite` read-only (the Favorites page rows, `ItemRow.tsx` on the dashboard, sidebar favorite collections) are out of scope for this feature unless the user asks to extend the toggle there too — confirm before adding scope.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Reuses the established action-file pattern: `requireUserId`, Zod-free simple toggle (no body payload beyond the id), `ActionResult<T>` return shape, generic error message in `catch` — see `src/actions/items.ts` / `src/actions/collections.ts`.
+- `ItemWithType` (used by `ItemCard`) and `CollectionWithStats` (used by `CollectionCard`) both already carry `isFavorite`, so no new fields are needed on those list-query shapes — only new mutation functions.
+- No DB migration expected; `isFavorite` already exists on both `Item` and `Collection`.
+- Per the repo's Testing standard, the new toggle server actions/queries are Prisma + `auth()` (no unit tests expected, consistent with `updateItem`/`deleteItem`); no new pure logic is anticipated, but note if any pure helper does emerge, it should get Vitest coverage.
 
 ## History
 
