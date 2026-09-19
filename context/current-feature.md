@@ -1,18 +1,24 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Homepage
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Replace the root `/` route with a real marketing homepage built from `prototypes/homepage/` (`index.html`/`styles.css`/`script.js`), outside the `(app)` and `(auth)` route groups, with no auth guard.
+- Port every mockup section: Navbar, Hero (chaos box / arrow / dashboard mock), Features grid, AI section, Pricing (with monthly/yearly toggle), CTA, Footer.
+- Rebuild markup with Tailwind v4 + shadcn/ui (`Button`, `Badge`, `Card` where they fit), matching the app's existing dark theme tokens instead of the prototype's custom CSS; reuse `ITEM_TYPE_COLORS`/`getItemTypeColor` from `src/lib/constants/item-types.ts` for the type-accent colors (mockup's `url` maps to `link`).
+- Split into server components (page itself, static sections) and small `"use client"` leaves under `src/components/homepage/`: `ChaosAnimation` (rAF float/bounce/mouse-repel loop), `PricingToggle` (monthly/yearly switch), a shared scroll fade-in mechanism, `Navbar` (scroll opacity).
+- No new dependencies — inline SVGs for brand icons (GitHub/Slack/VS Code/Notion, same as `GitHubIcon.tsx` precedent) and lucide-react for generic icons where a suitable one exists.
+- Footer copyright year computed server-side (`new Date().getFullYear()`), no client JS needed.
+- Wire every button/link to a real destination per the spec's Links & Routing table (Sign In → `/sign-in`, Get Started/CTAs → `/register`, Features/Pricing → in-page anchors, Company/Legal footer links stay non-navigating placeholders).
 
 ## Notes
 
-<!-- Any extra notes -->
+- Full spec: `context/features/homepage-spec.md`.
+- Out of scope: no Stripe checkout wiring (pricing buttons route to `/register` only), no CMS/dynamic content, no changes to `(app)`/`(auth)` layouts, `proxy.ts`, or existing routes.
+- Signed-in users still see this page normally at `/` — do not add an `auth()` redirect here.
 
 ## History
 
