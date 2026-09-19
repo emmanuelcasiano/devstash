@@ -1,18 +1,25 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Mobile Top Bar Declutter
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Below the `md` breakpoint, replace the search input in `TopBar` with a ghost icon button that opens the command palette (suggestion 2). From `md` up, keep the current read-only input.
+- Below the `sm` breakpoint, collapse **New Item** and **New Collection** into a single "+" `DropdownMenu` with a menu item for each (suggestion 4). From `sm` up, keep the current labeled buttons.
+- Favorites stays its own icon button at every width.
+- At 320px and 390px the top bar fits the viewport with no clipped or hidden controls (New Item must be reachable), and both creation dialogs still work from the menu.
+- Desktop (≥ `lg`) appearance is unchanged.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Origin: Playwright inspection of the dashboard top bar showed 509px of content in a 390px viewport — **New Item** was clipped off-screen, **New Collection** was cut off, and the search input was squeezed to a 44px box with no placeholder. See `src/components/layout/TopBar.tsx`.
+- `NewItemDialog` and `NewCollectionDialog` currently render their own `DialogTrigger` button, so they can't be opened from a menu item. They need to become controllable (`open` / `onOpenChange` props) so the dropdown items can open them; the labeled desktop buttons should keep working through the same controlled state (no duplicated dialog instances).
+- `NewItemDialog` is also used with a `defaultType` / `triggerLabel` on `src/app/(app)/items/[type]/page.tsx`, so that usage must keep working unchanged.
+- `TopBar` stays a client leaf; no new data fetching. Menu item icons: `Plus` (item) and `FolderPlus` (collection). Add `aria-label`s to icon-only buttons.
+- No server actions or `src/lib` utilities change, so no new Vitest tests are expected; verify visually with Playwright at 320 / 390 / 640 / 768 / 1024px.
+- Deferred suggestions (not part of this feature): icon-only labeled actions (1), hiding the wordmark (3), moving Favorites into the sidebar drawer (5).
 
 ## History
 
