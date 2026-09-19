@@ -48,6 +48,22 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+@theme {
+    --animate-arrow-pulse: arrow-pulse 1.8s ease-in-out infinite;
+
+    @keyframes arrow-pulse {
+        0%,
+        100% {
+            opacity: 0.55;
+            transform: translateX(0);
+        }
+        50% {
+            opacity: 1;
+            transform: translateX(6px);
+        }
+    }
+}
+
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
