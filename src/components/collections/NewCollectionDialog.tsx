@@ -28,10 +28,27 @@ interface CollectionFormValues {
 
 const EMPTY_FORM: CollectionFormValues = { name: "", description: "" };
 
-export function NewCollectionDialog() {
+interface NewCollectionDialogProps {
+    /** Controlled open state. Omit to let the dialog manage itself. */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    /** Set to false when the caller renders its own trigger. */
+    showTrigger?: boolean;
+}
+
+export function NewCollectionDialog({
+    open: controlledOpen,
+    onOpenChange,
+    showTrigger = true,
+}: NewCollectionDialogProps) {
     const router = useRouter();
 
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = controlledOpen ?? internalOpen;
+    function setOpen(next: boolean) {
+        setInternalOpen(next);
+        onOpenChange?.(next);
+    }
     const [form, setForm] = useState<CollectionFormValues>(EMPTY_FORM);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -78,10 +95,12 @@ export function NewCollectionDialog() {
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogTrigger render={<Button variant="outline" size="sm" />}>
-                <FolderPlus />
-                New Collection
-            </DialogTrigger>
+            {showTrigger && (
+                <DialogTrigger render={<Button variant="outline" size="sm" />}>
+                    <FolderPlus />
+                    New Collection
+                </DialogTrigger>
+            )}
 
             <DialogContent>
                 <DialogHeader>

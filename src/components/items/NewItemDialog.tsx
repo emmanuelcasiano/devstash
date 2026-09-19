@@ -70,16 +70,29 @@ interface NewItemDialogProps {
     triggerLabel?: string;
     /** The current user's collections, for the collection picker. */
     collections: CollectionOption[];
+    /** Controlled open state. Omit to let the dialog manage itself. */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    /** Set to false when the caller renders its own trigger. */
+    showTrigger?: boolean;
 }
 
 export function NewItemDialog({
     defaultType = DEFAULT_TYPE,
     triggerLabel = "New Item",
     collections,
+    open: controlledOpen,
+    onOpenChange,
+    showTrigger = true,
 }: NewItemDialogProps) {
     const router = useRouter();
 
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = controlledOpen ?? internalOpen;
+    function setOpen(next: boolean) {
+        setInternalOpen(next);
+        onOpenChange?.(next);
+    }
     const [type, setType] = useState<CreateItemType>(defaultType);
     const [form, setForm] = useState<ItemFormValues>(EMPTY_ITEM_FORM);
     const [upload, setUpload] = useState<UploadedFile | null>(null);
@@ -158,10 +171,12 @@ export function NewItemDialog({
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogTrigger render={<Button size="sm" />}>
-                <Plus />
-                {triggerLabel}
-            </DialogTrigger>
+            {showTrigger && (
+                <DialogTrigger render={<Button size="sm" />}>
+                    <Plus />
+                    {triggerLabel}
+                </DialogTrigger>
+            )}
 
             <DialogContent>
                 <DialogHeader>
