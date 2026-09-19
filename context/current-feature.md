@@ -1,18 +1,30 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: Homepage Mockup
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Build a static marketing homepage prototype for DevStash (not part of the Next.js app) under `prototypes/homepage/` with `index.html`, `styles.css`, and `script.js`.
+- Navigation: fixed top nav with logo, "Features"/"Pricing" links, Sign In/Get Started buttons; nav becomes more opaque on scroll.
+- Hero section (main focus): headline "Stop Losing Your Developer Knowledge" with gradient text, subheadline, CTA buttons, and a three-part "chaos to order" visual:
+  - Left: "Your knowledge today..." box with 8 floating icons (Notion, GitHub, Slack, VS Code, browser tabs, terminal, text file, bookmark) animated via `requestAnimationFrame` — drifting, bouncing off walls, subtle rotate/scale pulsing, repelling from the mouse cursor.
+  - Center: pulsing CSS arrow from chaos to order.
+  - Right: "...with DevStash" simplified dashboard mockup (sidebar nav + grid of item cards with colored top borders using item type colors).
+- Features section: 6 cards (Code Snippets, AI Prompts, Instant Search, Commands, Files & Docs, Collections), each tinted with its item type accent color.
+- AI section: two columns — left has a "Pro Feature" badge + checklist of AI capabilities; right shows a code editor mockup with an "AI Generated Tags" demo.
+- Pricing section: Free ($0, 50 items, 3 collections) vs Pro ($8/mo, unlimited, AI features) with a "Most Popular" badge on Pro, plus a monthly/yearly toggle showing $72/yr.
+- CTA section: "Ready to Organize Your Knowledge?" with a button.
+- Footer: logo, link columns, copyright with the current year.
+- Scroll animations: elements fade in as they enter the viewport.
+- Responsive: chaos/arrow/dashboard stack vertically on mobile with the arrow rotated 90° to point down; feature/pricing grids collapse to a single column.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Spec source: `context/features/homepage-mockup-spec.md`.
+- Dark theme with item-type accent colors: Snippet `#3b82f6`, Prompt `#f59e0b`, Command `#06b6d4`, Note `#22c55e`, File `#64748b`, Image `#ec4899`, URL `#6366f1`.
+- This is a standalone static prototype (plain HTML/CSS/JS), not wired into the Next.js app or its routing/auth.
 
 ## History
 
