@@ -46,6 +46,8 @@ export default async function ProfilePage() {
                 Back to dashboard
             </Link>
 
+            <h1 className="text-2xl font-semibold text-foreground">Profile</h1>
+
             {/* User info */}
             <section className="flex items-center gap-4">
                 <UserAvatar name={user.name} image={user.image} size="lg" />

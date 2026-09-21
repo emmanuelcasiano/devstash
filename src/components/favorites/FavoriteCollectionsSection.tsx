@@ -35,23 +35,35 @@ export function FavoriteCollectionsSection({
                 <h2 className="font-mono text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     Collections ({collections.length})
                 </h2>
-                <Select
-                    value={sort}
-                    onValueChange={(value: CollectionSortOption | null) => {
-                        if (value !== null) setSort(value);
-                    }}
-                >
-                    <SelectTrigger className="h-6 w-28 font-mono text-xs">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {Object.entries(SORT_LABELS).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                                {label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                    <span
+                        className="font-mono text-xs text-muted-foreground"
+                        aria-hidden
+                    >
+                        Sort by
+                    </span>
+                    <Select
+                        value={sort}
+                        items={SORT_LABELS}
+                        onValueChange={(value: CollectionSortOption | null) => {
+                            if (value !== null) setSort(value);
+                        }}
+                    >
+                        <SelectTrigger
+                            aria-label="Sort favorite collections by"
+                            className="h-6 w-28 font-mono text-xs"
+                        >
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(SORT_LABELS).map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                    {label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
             <div className="divide-y divide-border/60 rounded-lg border border-border/60">
                 {sortedCollections.map((collection) => (

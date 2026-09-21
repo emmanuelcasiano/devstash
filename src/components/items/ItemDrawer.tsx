@@ -154,7 +154,10 @@ export function ItemDrawer({
 
     return (
         <Sheet open={openItemId !== null} onOpenChange={handleSheetOpenChange}>
-            <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-md">
+            <SheetContent
+                side="right"
+                className="gap-0 p-0 data-[side=right]:w-full sm:max-w-md"
+            >
                 {isLoading && <DrawerSkeleton />}
 
                 {isError && (
@@ -197,7 +200,7 @@ export function ItemDrawer({
                                                 </p>
                                             </>
                                         ) : (
-                                            <SheetTitle className="truncate text-base">
+                                            <SheetTitle className="line-clamp-2 text-base break-words">
                                                 {item.title}
                                             </SheetTitle>
                                         )}

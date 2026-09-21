@@ -53,7 +53,7 @@ export function ItemCard({ item }: { item: ItemWithType }) {
                             </div>
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5">
-                                    <h3 className="truncate text-sm font-medium text-foreground">
+                                    <h3 className="line-clamp-2 text-sm font-medium break-words text-foreground">
                                         {item.title}
                                     </h3>
                                     {item.isPinned && (

@@ -44,7 +44,7 @@ export function ItemActionBar({
     }
 
     return (
-        <div className="flex items-center gap-0.5">
+        <div className="flex flex-wrap items-center gap-0.5">
             <Button variant="ghost" size="sm" onClick={onToggleFavorite}>
                 <Star
                     className={cn(

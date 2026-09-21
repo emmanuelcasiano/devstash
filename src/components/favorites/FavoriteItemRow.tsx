@@ -34,8 +34,8 @@ export function FavoriteItemRow({ item }: { item: FavoriteItem }) {
             >
                 {capitalize(item.itemType.name)}
             </Badge>
-            <span className="w-16 shrink-0 text-right text-muted-foreground">
-                {formatShortDate(item.updatedAt)}
+            <span className="w-28 shrink-0 text-right text-muted-foreground">
+                Updated {formatShortDate(item.updatedAt)}
             </span>
         </button>
     );

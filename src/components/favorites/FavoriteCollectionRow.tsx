@@ -25,8 +25,8 @@ export function FavoriteCollectionRow({ collection }: { collection: FavoriteColl
             <span className="hidden w-14 shrink-0 text-right text-muted-foreground md:block">
                 {collection.itemCount} {collection.itemCount === 1 ? "item" : "items"}
             </span>
-            <span className="w-16 shrink-0 text-right text-muted-foreground">
-                {formatShortDate(collection.updatedAt)}
+            <span className="w-28 shrink-0 text-right text-muted-foreground">
+                Updated {formatShortDate(collection.updatedAt)}
             </span>
         </Link>
     );
