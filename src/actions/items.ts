@@ -6,6 +6,7 @@ import {
     zodMessage,
     type ActionResult,
 } from "@/actions/shared";
+import { getItemCreationBlock } from "@/lib/billing/limits";
 import {
     createItem as createItemQuery,
     deleteItem as deleteItemQuery,
@@ -38,6 +39,9 @@ export async function createItem(
     }
 
     try {
+        const blocked = await getItemCreationBlock(parsed.data.type);
+        if (blocked) return { success: false, error: blocked };
+
         const created = await createItemQuery(parsed.data);
         if (!created) {
             return { success: false, error: "Could not create the item." };

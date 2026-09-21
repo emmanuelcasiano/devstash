@@ -85,8 +85,9 @@ export default async function ItemsByTypePage({ params }: PageProps<"/items/[typ
   const itemType = await resolveItemTypeSlug(type);
   if (!itemType) notFound();
 
-  // 2. Pro gate (optional now, required before launch): if isProItemType(type)
-  //    and the user is not Pro, render an upsell instead of the list.
+  // 2. Pro gate: not applied to listing — a downgraded user keeps read/edit/delete/
+  //    download access to existing file/image items. Only *creating* one is gated
+  //    (createItem action + POST /api/upload).
 
   // 3. Fetch this user's items of that type.
   const items = await getItemsByType(itemType.name);
@@ -346,5 +347,7 @@ sync → revalidate.
   follows the code. Pick one and align the overview.
 - **R2 upload route** for `file` / `image` is out of scope here; `FILE`-type
   create/update is stubbed until it exists.
-- **Free-tier item cap** enforcement point is `createItem`; deferred per project
-  policy.
+- **Free-tier item cap** is enforced in the `createItem` server action (and the
+  collection cap in `createCollection`, file/image uploads in `POST /api/upload`)
+  via `src/lib/billing/limits.ts`. `PRO_GATING_ENABLED="false"` switches it off in
+  development. See `docs/stripe-integration-plan.md`.

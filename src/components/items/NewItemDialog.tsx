@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 
 import { createItem } from "@/actions/items";
+import { usePlan } from "@/components/billing/plan-provider";
+import { UpgradeNotice } from "@/components/billing/UpgradeNotice";
 import { CollectionPicker } from "@/components/items/CollectionPicker";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { ItemContentField } from "@/components/items/ItemContentField";
@@ -24,6 +26,7 @@ import {
     EMPTY_ITEM_FORM,
     type ItemFormValues,
 } from "@/components/items/item-form";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -38,7 +41,12 @@ import { FormError } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getItemTypeColor } from "@/lib/constants/item-types";
+import {
+    FREE_ITEM_LIMIT,
+    ITEM_LIMIT_ERROR,
+    PRO_TYPE_ERROR,
+} from "@/lib/billing/plans";
+import { getItemTypeColor, isProItemType } from "@/lib/constants/item-types";
 import type { CollectionOption } from "@/lib/db/collections";
 import { makeFieldUpdater } from "@/lib/forms";
 import {
@@ -86,6 +94,7 @@ export function NewItemDialog({
     showTrigger = true,
 }: NewItemDialogProps) {
     const router = useRouter();
+    const { hasPro, itemCount } = usePlan();
 
     const [internalOpen, setInternalOpen] = useState(false);
     const open = controlledOpen ?? internalOpen;
@@ -106,7 +115,13 @@ export function NewItemDialog({
     const showLanguageField = isLanguageItemType(type);
     const showUrlField = type === "link";
 
+    // Proactive UX only — `createItem` and `/api/upload` enforce these server-side.
+    const proTypeBlocked = !hasPro && isFileType;
+    const itemLimitReached = !hasPro && itemCount >= FREE_ITEM_LIMIT;
+
     const canSubmit =
+        !proTypeBlocked &&
+        !itemLimitReached &&
         form.title.trim() !== "" &&
         (!showUrlField || form.url.trim() !== "") &&
         (!isFileType || upload !== null) &&
@@ -222,11 +237,23 @@ export function NewItemDialog({
                                             }}
                                         />
                                         {option.label}
+                                        {!hasPro && isProItemType(option.value) && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="h-4 rounded px-1 text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase"
+                                            >
+                                                PRO
+                                            </Badge>
+                                        )}
                                     </button>
                                 );
                             })}
                         </div>
                     </div>
+
+                    {itemLimitReached && !proTypeBlocked && (
+                        <UpgradeNotice message={ITEM_LIMIT_ERROR} />
+                    )}
 
                     {error && <FormError>{error}</FormError>}
 
@@ -254,12 +281,16 @@ export function NewItemDialog({
                             label={type === "image" ? "Image" : "File"}
                             htmlFor="new-item-upload"
                         >
-                            <FileUpload
-                                kind={type === "image" ? "image" : "file"}
-                                value={upload}
-                                onChange={setUpload}
-                                disabled={submitting}
-                            />
+                            {proTypeBlocked ? (
+                                <UpgradeNotice message={PRO_TYPE_ERROR} />
+                            ) : (
+                                <FileUpload
+                                    kind={type === "image" ? "image" : "file"}
+                                    value={upload}
+                                    onChange={setUpload}
+                                    disabled={submitting}
+                                />
+                            )}
                         </Field>
                     )}
 

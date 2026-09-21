@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { FolderPlus, Loader2 } from "lucide-react";
 
 import { createCollection } from "@/actions/collections";
+import { usePlan } from "@/components/billing/plan-provider";
+import { UpgradeNotice } from "@/components/billing/UpgradeNotice";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -19,6 +21,10 @@ import { Field } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    COLLECTION_LIMIT_ERROR,
+    FREE_COLLECTION_LIMIT,
+} from "@/lib/billing/plans";
 import { makeFieldUpdater } from "@/lib/forms";
 
 interface CollectionFormValues {
@@ -42,6 +48,7 @@ export function NewCollectionDialog({
     showTrigger = true,
 }: NewCollectionDialogProps) {
     const router = useRouter();
+    const { hasPro, collectionCount } = usePlan();
 
     const [internalOpen, setInternalOpen] = useState(false);
     const open = controlledOpen ?? internalOpen;
@@ -54,7 +61,10 @@ export function NewCollectionDialog({
     const [submitting, setSubmitting] = useState(false);
     const updateField = makeFieldUpdater(setForm);
 
-    const canSubmit = form.name.trim() !== "" && !submitting;
+    // Proactive UX only — `createCollection` enforces the limit server-side.
+    const limitReached = !hasPro && collectionCount >= FREE_COLLECTION_LIMIT;
+
+    const canSubmit = form.name.trim() !== "" && !limitReached && !submitting;
 
     function resetForm() {
         setForm(EMPTY_FORM);
@@ -115,6 +125,10 @@ export function NewCollectionDialog({
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    {limitReached && (
+                        <UpgradeNotice message={COLLECTION_LIMIT_ERROR} />
+                    )}
+
                     {error && <FormError>{error}</FormError>}
 
                     <Field label="Name" htmlFor="new-collection-name">

@@ -327,9 +327,17 @@ async function main() {
         email: DEMO_USER_EMAIL,
         name: "Demo User",
         password: hashedPassword,
-        isPro: false,
+        isPro: true,
         emailVerified: new Date(),
       },
+    });
+  } else if (!user.isPro) {
+    // The demo user seeds 5 collections (Free limit is 3), so it must be Pro or
+    // it would be permanently over-limit once gating is on. Backfills accounts
+    // seeded before this change.
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { isPro: true },
     });
   }
 
