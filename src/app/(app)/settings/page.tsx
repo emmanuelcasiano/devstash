@@ -4,8 +4,11 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/auth";
+import { getCollectionStats } from "@/lib/db/collections";
+import { getItemStats } from "@/lib/db/items";
 import { getProfileUser } from "@/lib/db/user";
 import { AccountActions } from "@/components/settings/AccountActions";
+import { BillingSettings } from "@/components/settings/BillingSettings";
 import { EditorPreferencesSettings } from "@/components/settings/EditorPreferencesSettings";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -15,13 +18,22 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ checkout?: string }>;
+}) {
     const session = await auth();
     if (!session?.user) {
         redirect("/sign-in?callbackUrl=/settings");
     }
 
-    const user = await getProfileUser();
+    const [{ checkout }, user, itemStats, collectionStats] = await Promise.all([
+        searchParams,
+        getProfileUser(),
+        getItemStats(),
+        getCollectionStats(),
+    ]);
 
     if (!user) {
         redirect("/sign-in?callbackUrl=/settings");
@@ -44,6 +56,25 @@ export default async function SettingsPage() {
                 <Card>
                     <CardContent>
                         <EditorPreferencesSettings />
+                    </CardContent>
+                </Card>
+            </section>
+
+            <section className="flex flex-col gap-4">
+                <h2 className="text-sm font-medium text-muted-foreground">Billing</h2>
+                <Card>
+                    <CardContent>
+                        <BillingSettings
+                            isPro={user.isPro}
+                            hasStripeCustomer={user.hasStripeCustomer}
+                            itemCount={itemStats.totalItems}
+                            collectionCount={collectionStats.totalCollections}
+                            checkoutStatus={
+                                checkout === "success" || checkout === "canceled"
+                                    ? checkout
+                                    : undefined
+                            }
+                        />
                     </CardContent>
                 </Card>
             </section>

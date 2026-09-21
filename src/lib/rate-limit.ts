@@ -41,6 +41,8 @@ export const RATE_LIMITS = {
   verifyEmail: { limit: 10, window: "15 m", prefix: "rl:verify-email" },
   /** Change-password from the profile page, keyed on `session.user.id`. Only failed attempts count. */
   changePassword: { limit: 5, window: "15 m", prefix: "rl:change-password" },
+  /** Checkout / billing-portal session creation, keyed on `session.user.id`. */
+  billing: { limit: 10, window: "1 h", prefix: "rl:billing" },
 } as const satisfies Record<string, LimitConfig>;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

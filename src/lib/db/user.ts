@@ -16,6 +16,10 @@ export interface ProfileUser {
     createdAt: Date;
     /** True when the account has a password hash (email/password sign-up). */
     hasPassword: boolean;
+    /** The real stored plan flag — not `hasProAccess()`, which honors the dev gating switch. */
+    isPro: boolean;
+    /** True once a Stripe customer exists (a cancelled user keeps theirs). The id itself is never returned. */
+    hasStripeCustomer: boolean;
 }
 
 /**
@@ -37,6 +41,8 @@ export async function getProfileUser(): Promise<ProfileUser | null> {
             image: true,
             createdAt: true,
             password: true,
+            isPro: true,
+            stripeCustomerId: true,
         },
     });
 
@@ -49,6 +55,8 @@ export async function getProfileUser(): Promise<ProfileUser | null> {
         image: user.image,
         createdAt: user.createdAt,
         hasPassword: user.password !== null,
+        isPro: user.isPro,
+        hasStripeCustomer: user.stripeCustomerId !== null,
     };
 }
 
