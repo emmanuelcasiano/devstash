@@ -40,10 +40,16 @@ export function TopBar({
                 >
                     <PanelLeft />
                 </Button>
-                <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500">
-                    <Layers className="size-4 text-white" />
-                </div>
-                <span className="font-semibold">DevStash</span>
+                <Link
+                    href="/"
+                    aria-label="DevStash home"
+                    className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                    <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500">
+                        <Layers className="size-4 text-white" />
+                    </div>
+                    <span className="font-semibold">DevStash</span>
+                </Link>
             </div>
             <div className="relative hidden w-full max-w-sm md:block">
                 <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
