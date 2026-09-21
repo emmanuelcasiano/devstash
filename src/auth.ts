@@ -116,6 +116,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   ...authConfig,
+  callbacks: {
+    // Must spread: a bare `{ jwt }` would replace the whole object and drop the
+    // edge-safe `session` callback (token.sub → session.user.id, token.isPro →
+    // session.user.isPro), breaking every `requireUserId()`.
+    ...authConfig.callbacks,
+    async jwt({ token }) {
+      // Re-read `isPro` on every call so a webhook-driven change shows up on the
+      // next `auth()` without signing out. A missing (e.g. deleted) user is free.
+      if (token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { isPro: true },
+        });
+        token.isPro = dbUser?.isPro ?? false;
+      }
+      return token;
+    },
+  },
   providers: authConfig.providers.map((provider) =>
     typeof provider !== "function" && provider.id === "credentials"
       ? credentialsProvider

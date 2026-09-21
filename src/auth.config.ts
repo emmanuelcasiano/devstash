@@ -34,6 +34,7 @@ export default {
       if (token.sub) {
         session.user.id = token.sub;
       }
+      session.user.isPro = token.isPro === true;
       return session;
     },
   },
