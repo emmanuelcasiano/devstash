@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { PRO_TYPE_ERROR, hasProAccess } from "@/lib/billing/plans";
 import { buildPublicUrl, isR2Configured, uploadToR2 } from "@/lib/r2";
 import {
     isUploadKind,
@@ -25,6 +26,15 @@ export async function POST(request: Request) {
         return NextResponse.json(
             { error: "You must be signed in to upload files." },
             { status: 401 },
+        );
+    }
+
+    // Before `isR2Configured()` / `formData()`: a non-Pro user must be rejected
+    // without buffering a 10 MB body or touching R2.
+    if (!hasProAccess(session.user.isPro)) {
+        return NextResponse.json(
+            { error: PRO_TYPE_ERROR, code: "UPGRADE_REQUIRED" },
+            { status: 403 },
         );
     }
 

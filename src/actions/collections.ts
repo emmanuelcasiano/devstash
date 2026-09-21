@@ -6,6 +6,7 @@ import {
     zodMessage,
     type ActionResult,
 } from "@/actions/shared";
+import { getCollectionCreationBlock } from "@/lib/billing/limits";
 import {
     createCollection as createCollectionQuery,
     deleteCollection as deleteCollectionQuery,
@@ -41,6 +42,9 @@ export async function createCollection(
     }
 
     try {
+        const blocked = await getCollectionCreationBlock();
+        if (blocked) return { success: false, error: blocked };
+
         const created = await createCollectionQuery(parsed.data);
         if (!created) {
             return { success: false, error: "Could not create the collection." };

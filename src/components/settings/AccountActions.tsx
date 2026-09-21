@@ -214,8 +214,8 @@ function DeleteAccount({ email }: { email: string }) {
                         <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This permanently deletes your account along with every
-                            item and collection you own. This action cannot be
-                            undone.
+                            item and collection you own. An active subscription is
+                            cancelled immediately. This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 
