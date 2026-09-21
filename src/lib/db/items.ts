@@ -179,7 +179,7 @@ export async function getRecentItems(limit = 10): Promise<ItemWithType[]> {
 
     const items = await prisma.item.findMany({
         where: { userId },
-        orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
+        orderBy: { createdAt: "desc" },
         take: limit,
         include: { itemType: true, tags: true },
     });

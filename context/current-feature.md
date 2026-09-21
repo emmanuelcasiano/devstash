@@ -1,18 +1,35 @@
 # Current Feature
 
-<!-- Feature Name -->
+UI Review Fixes (High + Medium)
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+Fix the high and medium severity findings from the `ui-reviewer` audit of the homepage and the dashboard area (checked at 1440 / 768 / 390px).
+
+**High**
+
+1. Item drawer is unusable on mobile: the sheet is only 293px wide (the base `data-[side=right]:w-3/4` beats `w-full`) and the action bar can't wrap, so Edit is half clipped and Delete is off-screen.
+
+**Medium**
+
+2. Mobile sidebar drawer: the built-in Close (X) sits on top of the "Types" section toggle.
+3. Dashboard "Recent Items" repeats the Pinned section (pin-first sort was applied to `getRecentItems`; the pinned spec only asked for listings).
+4. Item dates disagree between pages (dashboard/cards show created date, `/favorites` shows updated date, neither labelled).
+5. New Item dialog footer (Cancel / Create) is clipped at 1440x900 — make it sticky.
+6. Card titles truncate needlessly on `/items/[type]` and collection pages, and in the drawer header — allow two lines.
+7. `/favorites` sort selects: no visible/accessible label, and the trigger shows the raw value ("date") instead of its label ("Date").
+8. `/settings` and `/profile` have no `<h1>` / weak heading hierarchy.
+9. Homepage has no navigation below `sm` — add a mobile menu.
 
 ## Notes
 
-<!-- Any extra notes -->
+- **Skipped: homepage social proof (medium).** There are no real testimonials, logos, or user counts to show; inventing them would be fabricated content. Needs real material from the user first.
+- Low-severity findings from the review are out of scope for this pass.
+- No DB migration, no new packages, no new env vars.
 
 ## History
 

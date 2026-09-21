@@ -37,6 +37,8 @@ export default async function SettingsPage() {
                 Back to dashboard
             </Link>
 
+            <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+
             <section className="flex flex-col gap-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Editor</h2>
                 <Card>

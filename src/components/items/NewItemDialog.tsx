@@ -327,7 +327,7 @@ export function NewItemDialog({
                         />
                     </Field>
 
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex items-center justify-end gap-2 border-t border-border bg-card px-6 py-3">
                         <Button
                             type="button"
                             variant="ghost"
