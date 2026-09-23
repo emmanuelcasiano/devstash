@@ -4,6 +4,7 @@ import {
   getItemTypeIcon,
   getItemTypeSlug,
   isProItemType,
+  resolveProItemTypeSlug,
 } from "@/lib/constants/item-types";
 import { Code } from "lucide-react";
 
@@ -22,6 +23,21 @@ describe("isProItemType", () => {
   it("does not flag the free system types", () => {
     expect(isProItemType("snippet")).toBe(false);
     expect(isProItemType("link")).toBe(false);
+  });
+});
+
+describe("resolveProItemTypeSlug", () => {
+  it("resolves singular and plural file/image slugs, case-insensitively", () => {
+    expect(resolveProItemTypeSlug("file")).toBe("file");
+    expect(resolveProItemTypeSlug("files")).toBe("file");
+    expect(resolveProItemTypeSlug("Image")).toBe("image");
+    expect(resolveProItemTypeSlug("images")).toBe("image");
+  });
+
+  it("returns null for non-Pro or unknown type slugs", () => {
+    expect(resolveProItemTypeSlug("snippet")).toBeNull();
+    expect(resolveProItemTypeSlug("snippets")).toBeNull();
+    expect(resolveProItemTypeSlug("bogus")).toBeNull();
   });
 });
 

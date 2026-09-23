@@ -51,3 +51,16 @@ export const PRO_ITEM_TYPES = new Set(["file", "image"]);
 export function isProItemType(name: string): boolean {
     return PRO_ITEM_TYPES.has(name.toLowerCase());
 }
+
+/**
+ * Resolves a `/items/[type]` route slug to `"file"` / `"image"` when it names
+ * one of the Pro-only types (accepting the plural form too, e.g. "files"), or
+ * `null` otherwise. Used to gate the whole page for Free users before any data
+ * is fetched, not just the create action.
+ */
+export function resolveProItemTypeSlug(slug: string): "file" | "image" | null {
+    const normalized = slug.toLowerCase();
+    if (normalized === "file" || normalized === "files") return "file";
+    if (normalized === "image" || normalized === "images") return "image";
+    return null;
+}
