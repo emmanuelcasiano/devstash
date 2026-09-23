@@ -8,6 +8,8 @@ import { getCollectionOptions } from "@/lib/db/collections";
 import { getItemsByType } from "@/lib/db/items";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validation/item";
 import { capitalize } from "@/lib/utils";
+import { hasProAccess } from "@/lib/billing/plans";
+import { resolveProItemTypeSlug } from "@/lib/constants/item-types";
 import { ITEMS_PER_PAGE } from "@/lib/constants/pagination";
 import { getTotalPages, parsePageParam } from "@/lib/pagination";
 import { ItemTypeIcon } from "@/components/shared/ItemTypeIcon";
@@ -16,6 +18,7 @@ import { ImageCard } from "@/components/items/ImageCard";
 import { FileRow } from "@/components/items/FileRow";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { ProFeatureUpgrade } from "@/components/billing/ProFeatureUpgrade";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +40,22 @@ export default async function ItemsByTypePage({
     const session = await auth();
     if (!session?.user) {
         redirect(`/sign-in?callbackUrl=${encodeURIComponent(`/items/${type}`)}`);
+    }
+
+    const proType = resolveProItemTypeSlug(type);
+    if (proType && !hasProAccess(session.user.isPro)) {
+        return (
+            <div className="flex flex-col gap-8">
+                <Link
+                    href="/dashboard"
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                >
+                    <ArrowLeft className="size-4" />
+                    Back to dashboard
+                </Link>
+                <ProFeatureUpgrade type={proType} />
+            </div>
+        );
     }
 
     const [result, collectionOptions] = await Promise.all([
