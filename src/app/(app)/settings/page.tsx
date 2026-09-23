@@ -60,7 +60,7 @@ export default async function SettingsPage({
                 </Card>
             </section>
 
-            <section className="flex flex-col gap-4">
+            <section id="billing" className="flex scroll-mt-6 flex-col gap-4">
                 <h2 className="text-sm font-medium text-muted-foreground">Billing</h2>
                 <Card>
                     <CardContent>
