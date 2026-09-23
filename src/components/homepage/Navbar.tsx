@@ -15,7 +15,8 @@ const NAV_LINKS = [
     { href: "#pricing", label: "Pricing" },
 ];
 
-export function Navbar() {
+export function Navbar({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+    const logoHref = isLoggedIn ? "/dashboard" : "/";
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -38,7 +39,7 @@ export function Navbar() {
             )}
         >
             <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-6 px-6">
-                <HomeLogo />
+                <HomeLogo href={logoHref} />
                 <nav className="hidden gap-7 text-sm text-muted-foreground sm:flex">
                     {NAV_LINKS.map((link) => (
                         <a
@@ -51,15 +52,23 @@ export function Navbar() {
                     ))}
                 </nav>
                 <div className="flex items-center gap-2">
-                    <Link
-                        href="/sign-in"
-                        className={cn(ctaClasses("ghost"), "hidden sm:inline-flex")}
-                    >
-                        Sign In
-                    </Link>
-                    <Link href="/register" className={ctaClasses("primary")}>
-                        Get Started
-                    </Link>
+                    {isLoggedIn ? (
+                        <Link href="/dashboard" className={ctaClasses("primary")}>
+                            Open DevStash
+                        </Link>
+                    ) : (
+                        <>
+                            <Link
+                                href="/sign-in"
+                                className={cn(ctaClasses("ghost"), "hidden sm:inline-flex")}
+                            >
+                                Sign In
+                            </Link>
+                            <Link href="/register" className={ctaClasses("primary")}>
+                                Get Started
+                            </Link>
+                        </>
+                    )}
                     <button
                         type="button"
                         onClick={() => setMenuOpen((open) => !open)}
@@ -91,12 +100,14 @@ export function Navbar() {
                             {link.label}
                         </a>
                     ))}
-                    <Link
-                        href="/sign-in"
-                        className="py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                        Sign In
-                    </Link>
+                    {!isLoggedIn && (
+                        <Link
+                            href="/sign-in"
+                            className="py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                            Sign In
+                        </Link>
+                    )}
                 </nav>
             )}
         </header>

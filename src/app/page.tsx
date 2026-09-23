@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { auth } from "@/auth";
 import { AiSection } from "@/components/homepage/AiSection";
 import { CtaSection } from "@/components/homepage/CtaSection";
 import { FeaturesSection } from "@/components/homepage/FeaturesSection";
@@ -14,10 +15,13 @@ export const metadata: Metadata = {
         "Snippets, prompts, commands, notes, files, and links in one fast, searchable home for your developer knowledge.",
 };
 
-export default function Home() {
+export default async function Home() {
+    const session = await auth();
+    const isLoggedIn = Boolean(session?.user);
+
     return (
         <div className="overflow-x-hidden">
-            <Navbar />
+            <Navbar isLoggedIn={isLoggedIn} />
             <main>
                 <HeroSection />
                 <FeaturesSection />
