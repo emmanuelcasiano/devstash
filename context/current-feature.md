@@ -1,18 +1,24 @@
 # Current Feature
 
-<!-- Feature Name -->
+Sidebar Pro Badge
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Show a PRO badge (blue → indigo gradient, matching the homepage CTA) next to the user's name in the sidebar footer when the user is on the Pro plan.
+- In the collapsed desktop rail, mark the avatar with a small gradient dot instead (no room for a badge).
+- Free users see a small "Free plan · Upgrade" row above the footer user button, linking to the Billing section of `/settings` (`/settings#billing`).
+- Applies to both the desktop sidebar and the mobile drawer (they share `Sidebar`).
 
 ## Notes
 
-<!-- Any extra notes -->
+- Driven by the real `session.user.isPro`, **not** `usePlan().hasPro` — `hasPro` is true for everyone when `PRO_GATING_ENABLED="false"`, which would label every user Pro.
+- The Upgrade link sits outside the dropdown trigger because a link can't be nested inside the trigger `<button>`.
+- Add `id="billing"` to the Billing section on `/settings` so the anchor lands there.
+- UI only — no server actions or `src/lib` utilities, so no new Vitest tests.
 
 ## History
 

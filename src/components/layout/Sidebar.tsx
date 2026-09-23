@@ -10,6 +10,7 @@ import {
     LogOut,
     PanelLeft,
     Settings,
+    Sparkles,
     Star,
     UserRound,
 } from "lucide-react";
@@ -45,7 +46,19 @@ export type SidebarUser = {
     name?: string | null;
     email?: string | null;
     image?: string | null;
+    /** The real plan flag (not `hasProAccess`), so gating-off dev mode doesn't label everyone Pro. */
+    isPro?: boolean;
 };
+
+/** Gradient PRO pill shown next to a Pro user's name. */
+function ProBadge() {
+    return (
+        <Badge className="h-4 shrink-0 gap-0.5 rounded border-0 bg-linear-to-r from-blue-500 to-indigo-500 px-1 text-[0.625rem] font-semibold tracking-wide text-white uppercase">
+            <Sparkles className="size-2.5" />
+            PRO
+        </Badge>
+    );
+}
 
 /** A collapsible `Types` / `Collections` group with its chevron trigger. */
 function SidebarSection({
@@ -343,6 +356,19 @@ export function Sidebar({
                 </nav>
             </ScrollArea>
 
+            {user && !user.isPro && !collapsed && (
+                <div className="flex shrink-0 items-center justify-between border-t border-border px-4 py-2 text-xs">
+                    <span className="text-muted-foreground">Free plan</span>
+                    <Link
+                        href="/settings#billing"
+                        className="inline-flex items-center gap-1 rounded font-medium text-indigo-400 outline-none hover:text-indigo-300 focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                        <Sparkles className="size-3" />
+                        Upgrade
+                    </Link>
+                </div>
+            )}
+
             <div
                 className={cn(
                     "sticky bottom-0 flex w-full shrink-0 items-center gap-2 border-t border-border bg-sidebar p-3",
@@ -355,7 +381,11 @@ export function Sidebar({
                             collapsed ? (
                                 <button
                                     type="button"
-                                    aria-label="Account menu"
+                                    aria-label={
+                                        user?.isPro
+                                            ? "Account menu (Pro plan)"
+                                            : "Account menu"
+                                    }
                                     className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                                 />
                             ) : (
@@ -367,12 +397,21 @@ export function Sidebar({
                             )
                         }
                     >
-                        <UserAvatar name={displayName} image={user?.image} />
+                        <span className="relative shrink-0">
+                            <UserAvatar name={displayName} image={user?.image} />
+                            {collapsed && user?.isPro && (
+                                <span
+                                    aria-hidden
+                                    className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full bg-linear-to-r from-blue-500 to-indigo-500 ring-2 ring-sidebar"
+                                />
+                            )}
+                        </span>
                         {!collapsed && (
                             <>
                                 <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-medium text-foreground">
-                                        {displayName}
+                                    <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                                        <span className="truncate">{displayName}</span>
+                                        {user?.isPro && <ProBadge />}
                                     </p>
                                     {user?.email && (
                                         <p className="truncate text-xs text-muted-foreground">
