@@ -1,27 +1,18 @@
 # Current Feature
 
-Gate /items/file and /items/image for Free Users
+<!-- Feature Name -->
 
 ## Status
 
-Completed
+<!-- Not Started|In Progress|Completed -->
 
 ## Goals
 
-- Free (non-Pro) users must not be able to view `/items/file` or `/items/image` —
-  File and Image are Pro-only item types.
-- Visiting either URL as a Free user should show an "Upgrade to Pro" page instead
-  of the item list, with a link to upgrade.
-- Pro users (and everyone when `PRO_GATING_ENABLED="false"`) keep normal access.
-- Gate before fetching item data — a Free user should never trigger the items
-  query for these types.
+<!-- Goals & requirements -->
 
 ## Notes
 
-- Reuses `hasProAccess()` from `src/lib/billing/plans.ts` and the session's
-  `isPro` flag, consistent with how item creation is already gated.
-- The route slug can be singular or plural (`/items/file` vs `/items/files`),
-  matching the existing convention in `getItemsByType`.
+<!-- Any extra notes -->
 
 ## History
 
