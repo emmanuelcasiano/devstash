@@ -31,6 +31,8 @@ export function ItemDetailView({ item }: { item: ItemDetailPayload }) {
                         language={item.language}
                         codeMaxHeight={DRAWER_CODE_MAX_HEIGHT}
                         readOnly
+                        title={item.title}
+                        showExplain
                     />
                 </DrawerSection>
             )}

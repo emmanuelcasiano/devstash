@@ -2,10 +2,17 @@
 
 import { useCallback, useState } from "react";
 import dynamic from "next/dynamic";
-import { Check, Copy } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
+import { Check, Copy, Crown, Loader2, Sparkles } from "lucide-react";
 import type { BeforeMount, OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 
+import { explainCode } from "@/actions/ai";
+import { usePlan } from "@/components/billing/plan-provider";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ExplainItemType } from "@/lib/ai/explain";
 import { toMonacoLanguage } from "@/lib/code-language";
 import { cn } from "@/lib/utils";
 import { useEditorPreferences } from "@/components/editor/editor-preferences-provider";
@@ -104,6 +111,8 @@ const THEME_DEFINITIONS: Record<string, editor.IStandaloneThemeData> = {
     },
 };
 
+type ViewTab = "code" | "explain";
+
 interface CodeEditorProps {
     value: string;
     /** Free-text `Item.language`; mapped to a Monaco language id. */
@@ -116,6 +125,14 @@ interface CodeEditorProps {
     maxHeight?: number;
     onValueChange?: (value: string) => void;
     className?: string;
+    /** Item title, sent as extra context to the AI "Explain" feature only. */
+    title?: string | null;
+    /**
+     * Shows the Pro-gated "Explain" button and Code/Explain tabs — only passed
+     * `true` from the item drawer's read view (snippet/command types), never
+     * from the create/edit forms.
+     */
+    showExplain?: boolean;
 }
 
 export function CodeEditor({
@@ -126,14 +143,22 @@ export function CodeEditor({
     maxHeight = DEFAULT_MAX_HEIGHT,
     onValueChange,
     className,
+    title,
+    showExplain = false,
 }: CodeEditorProps) {
     const [height, setHeight] = useState(MIN_HEIGHT);
     const [copied, setCopied] = useState(false);
     const { preferences } = useEditorPreferences();
+    const { hasPro } = usePlan();
+
+    const [tab, setTab] = useState<ViewTab>("code");
+    const [explanation, setExplanation] = useState<string | null>(null);
+    const [explaining, setExplaining] = useState(false);
 
     const monacoLanguage = toMonacoLanguage(language, typeName);
     const displayLanguage =
         language?.trim() || (typeName === "command" ? "shell" : "");
+    const showTabs = showExplain && (explanation !== null || explaining);
 
     const handleBeforeMount = useCallback<BeforeMount>((monaco) => {
         for (const [name, theme] of Object.entries(THEME_DEFINITIONS)) {
@@ -168,6 +193,31 @@ export function CodeEditor({
         }
     }, [value]);
 
+    const handleExplain = useCallback(async () => {
+        if (!hasPro || explaining || !value.trim()) return;
+        if (typeName !== "snippet" && typeName !== "command") return;
+
+        setExplaining(true);
+        setTab("explain");
+
+        const result = await explainCode({
+            title: title ?? "",
+            content: value,
+            language: displayLanguage,
+            typeName: typeName as ExplainItemType,
+        });
+
+        setExplaining(false);
+
+        if (!result.success) {
+            toast.error(result.error);
+            setTab("code");
+            return;
+        }
+
+        setExplanation(result.data.explanation);
+    }, [hasPro, explaining, value, typeName, title, displayLanguage]);
+
     return (
         <div
             className={cn(
@@ -176,16 +226,38 @@ export function CodeEditor({
             )}
         >
             <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-2">
-                <div className="flex items-center gap-1.5" aria-hidden>
-                    <span className="size-3 rounded-full bg-[#ff5f57]" />
-                    <span className="size-3 rounded-full bg-[#febc2e]" />
-                    <span className="size-3 rounded-full bg-[#28c840]" />
-                </div>
+                {showTabs ? (
+                    <div className="flex items-center gap-1">
+                        <TabButton active={tab === "code"} onClick={() => setTab("code")}>
+                            Code
+                        </TabButton>
+                        <TabButton
+                            active={tab === "explain"}
+                            onClick={() => setTab("explain")}
+                        >
+                            Explain
+                        </TabButton>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-1.5" aria-hidden>
+                        <span className="size-3 rounded-full bg-[#ff5f57]" />
+                        <span className="size-3 rounded-full bg-[#febc2e]" />
+                        <span className="size-3 rounded-full bg-[#28c840]" />
+                    </div>
+                )}
                 <div className="flex items-center gap-2">
                     {displayLanguage && (
                         <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                             {displayLanguage}
                         </span>
+                    )}
+                    {showExplain && (
+                        <ExplainButton
+                            hasPro={hasPro}
+                            loading={explaining}
+                            disabled={!value.trim()}
+                            onClick={handleExplain}
+                        />
                     )}
                     <button
                         type="button"
@@ -204,7 +276,7 @@ export function CodeEditor({
                 </div>
             </div>
 
-            <div style={{ height }}>
+            <div style={{ height }} className={cn(showTabs && tab === "explain" && "hidden")}>
                 <MonacoEditor
                     value={value}
                     language={monacoLanguage}
@@ -244,6 +316,105 @@ export function CodeEditor({
                     }}
                 />
             </div>
+
+            {showTabs && tab === "explain" && (
+                <div
+                    style={{ maxHeight }}
+                    className="editor-scroll overflow-y-auto px-4 py-3"
+                >
+                    {explaining ? (
+                        <div className="space-y-2" aria-hidden>
+                            <div className="h-3 w-5/6 animate-pulse rounded bg-muted" />
+                            <div className="h-3 w-full animate-pulse rounded bg-muted" />
+                            <div className="h-3 w-4/6 animate-pulse rounded bg-muted" />
+                            <div className="h-3 w-full animate-pulse rounded bg-muted" />
+                            <div className="h-3 w-3/6 animate-pulse rounded bg-muted" />
+                        </div>
+                    ) : (
+                        explanation && (
+                            <div className="markdown-preview">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {explanation}
+                                </ReactMarkdown>
+                            </div>
+                        )
+                    )}
+                </div>
+            )}
         </div>
+    );
+}
+
+function TabButton({
+    active,
+    onClick,
+    children,
+}: {
+    active: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn(
+                "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                active
+                    ? "bg-[#171717] text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+            )}
+        >
+            {children}
+        </button>
+    );
+}
+
+function ExplainButton({
+    hasPro,
+    loading,
+    disabled,
+    onClick,
+}: {
+    hasPro: boolean;
+    loading: boolean;
+    disabled: boolean;
+    onClick: () => void;
+}) {
+    if (!hasPro) {
+        return (
+            <Tooltip>
+                <TooltipTrigger
+                    render={
+                        <button
+                            type="button"
+                            aria-disabled="true"
+                            className="inline-flex cursor-not-allowed items-center gap-1 rounded-md px-1.5 py-1 text-xs text-muted-foreground opacity-60"
+                        />
+                    }
+                >
+                    <Crown className="size-3.5" />
+                    Explain
+                </TooltipTrigger>
+                <TooltipContent>AI features require Pro subscription</TooltipContent>
+            </Tooltip>
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled || loading}
+            aria-label="Explain code"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+        >
+            {loading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+                <Sparkles className="size-3.5" />
+            )}
+            Explain
+        </button>
     );
 }

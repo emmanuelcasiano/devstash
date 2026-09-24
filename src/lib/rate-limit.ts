@@ -47,6 +47,8 @@ export const RATE_LIMITS = {
   aiAutoTag: { limit: 20, window: "1 h", prefix: "rl:ai-auto-tag" },
   /** AI description generation, keyed on `session.user.id`. */
   aiDescribe: { limit: 20, window: "1 h", prefix: "rl:ai-describe" },
+  /** AI code explanation, keyed on `session.user.id`. */
+  aiExplain: { limit: 20, window: "1 h", prefix: "rl:ai-explain" },
 } as const satisfies Record<string, LimitConfig>;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

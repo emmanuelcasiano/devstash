@@ -21,6 +21,10 @@ interface ItemContentFieldProps {
     /** `id` and `rows` for the plain-textarea fallback (non-code, non-markdown). */
     textareaId?: string;
     rows?: number;
+    /** Item title, passed through to the code editor's AI "Explain" feature only. */
+    title?: string | null;
+    /** Shows the code editor's Pro-gated "Explain" button — item drawer read view only. */
+    showExplain?: boolean;
 }
 
 /**
@@ -38,6 +42,8 @@ export function ItemContentField({
     onChange,
     textareaId,
     rows = 8,
+    title,
+    showExplain = false,
 }: ItemContentFieldProps) {
     if (isCodeItemType(typeName)) {
         return (
@@ -48,6 +54,8 @@ export function ItemContentField({
                 readOnly={readOnly}
                 maxHeight={codeMaxHeight}
                 onValueChange={onChange}
+                title={title}
+                showExplain={showExplain}
             />
         );
     }

@@ -25,6 +25,14 @@ import {
     parseDescriptionSuggestion,
     truncateDescribeContent,
 } from "@/lib/ai/describe";
+import {
+    EXPLAIN_MAX_OUTPUT_TOKENS,
+    buildExplainPrompt,
+    explainCodeInputSchema,
+    explanationSuggestionSchema,
+    parseExplanation,
+    truncateExplainContent,
+} from "@/lib/ai/explain";
 import { hasProAccess } from "@/lib/billing/plans";
 import { getCurrentUserIsPro } from "@/lib/db/current-user";
 import { getGemini, isGeminiConfigured } from "@/lib/gemini";
@@ -34,6 +42,7 @@ const AI_UNAVAILABLE_ERROR = "AI features aren't available right now.";
 const AI_PRO_ONLY_ERROR = "AI tag suggestions are a Pro feature. Upgrade to use them.";
 const AI_DESCRIBE_PRO_ONLY_ERROR =
     "AI description generation is a Pro feature. Upgrade to use it.";
+const AI_EXPLAIN_PRO_ONLY_ERROR = "AI code explanation is a Pro feature. Upgrade to use it.";
 const AI_RATE_LIMIT_ERROR = "Too many AI requests. Please wait a bit and try again.";
 
 /**
@@ -173,6 +182,71 @@ export async function generateDescription(
             return { success: false, error: AI_RATE_LIMIT_ERROR };
         }
         console.error("AI description generation failed:", error);
+        return { success: false, error: GENERIC_ERROR };
+    }
+}
+
+/**
+ * Explains a snippet or command's code via Gemini, for the "Explain" button in
+ * the code editor's window-controls header (item drawer read view only).
+ *
+ * Like the other AI actions, this runs against whatever content the client
+ * currently has loaded — not a server-side item lookup — and the result is
+ * never persisted; it's regenerated on demand.
+ */
+export async function explainCode(
+    input: unknown,
+): Promise<ActionResult<{ explanation: string }>> {
+    const user = await requireUserId("explain code with AI");
+    if ("error" in user) return { success: false, error: user.error };
+
+    const parsed = explainCodeInputSchema.safeParse(input);
+    if (!parsed.success) {
+        return { success: false, error: zodMessage(parsed.error) };
+    }
+
+    if (!hasProAccess(await getCurrentUserIsPro())) {
+        return { success: false, error: AI_EXPLAIN_PRO_ONLY_ERROR };
+    }
+    if (!isGeminiConfigured()) {
+        return { success: false, error: AI_UNAVAILABLE_ERROR };
+    }
+
+    const limit = await checkRateLimit("aiExplain", user.userId);
+    if (!limit.success) {
+        return { success: false, error: AI_RATE_LIMIT_ERROR };
+    }
+
+    const content = truncateExplainContent(parsed.data.content);
+
+    try {
+        const response = await getGemini().models.generateContent({
+            model: AI_MODEL,
+            contents: buildExplainPrompt({ ...parsed.data, content }),
+            config: {
+                systemInstruction:
+                    "Explain the given code snippet or terminal command concisely, formatted as Markdown, covering what it does and any key concepts. Aim for about 200-300 words. Respond with the explanation only, no surrounding quotes.",
+                maxOutputTokens: EXPLAIN_MAX_OUTPUT_TOKENS,
+                responseMimeType: "application/json",
+                responseJsonSchema: explanationSuggestionSchema.toJSONSchema(),
+            },
+        });
+
+        if (!response.text) {
+            return { success: false, error: GENERIC_ERROR };
+        }
+
+        const explanation = parseExplanation(response.text);
+        if (!explanation) {
+            return { success: false, error: GENERIC_ERROR };
+        }
+
+        return { success: true, data: { explanation } };
+    } catch (error) {
+        if (error instanceof ApiError && error.status === 429) {
+            return { success: false, error: AI_RATE_LIMIT_ERROR };
+        }
+        console.error("AI code explanation failed:", error);
         return { success: false, error: GENERIC_ERROR };
     }
 }
