@@ -33,6 +33,14 @@ import {
     parseExplanation,
     truncateExplainContent,
 } from "@/lib/ai/explain";
+import {
+    OPTIMIZE_PROMPT_MAX_OUTPUT_TOKENS,
+    buildOptimizePromptPrompt,
+    optimizePromptInputSchema,
+    optimizedPromptSuggestionSchema,
+    parseOptimizedPrompt,
+    truncateOptimizePromptContent,
+} from "@/lib/ai/optimize-prompt";
 import { hasProAccess } from "@/lib/billing/plans";
 import { getCurrentUserIsPro } from "@/lib/db/current-user";
 import { getGemini, isGeminiConfigured } from "@/lib/gemini";
@@ -43,6 +51,8 @@ const AI_PRO_ONLY_ERROR = "AI tag suggestions are a Pro feature. Upgrade to use 
 const AI_DESCRIBE_PRO_ONLY_ERROR =
     "AI description generation is a Pro feature. Upgrade to use it.";
 const AI_EXPLAIN_PRO_ONLY_ERROR = "AI code explanation is a Pro feature. Upgrade to use it.";
+const AI_OPTIMIZE_PROMPT_PRO_ONLY_ERROR =
+    "AI prompt optimization is a Pro feature. Upgrade to use it.";
 const AI_RATE_LIMIT_ERROR = "Too many AI requests. Please wait a bit and try again.";
 
 /**
@@ -247,6 +257,73 @@ export async function explainCode(
             return { success: false, error: AI_RATE_LIMIT_ERROR };
         }
         console.error("AI code explanation failed:", error);
+        return { success: false, error: GENERIC_ERROR };
+    }
+}
+
+/**
+ * Refines a prompt item's content via Gemini, for the "Optimize" button in
+ * the prompt markdown editor's header (create dialog and the item drawer's
+ * edit mode).
+ *
+ * Like the other AI actions, this runs against whatever content the client
+ * currently has staged in its form — not a stored item — and the result is
+ * never applied automatically; the caller shows it as a suggestion the user
+ * explicitly accepts or discards.
+ */
+export async function optimizePrompt(
+    input: unknown,
+): Promise<ActionResult<{ prompt: string }>> {
+    const user = await requireUserId("optimize a prompt with AI");
+    if ("error" in user) return { success: false, error: user.error };
+
+    const parsed = optimizePromptInputSchema.safeParse(input);
+    if (!parsed.success) {
+        return { success: false, error: zodMessage(parsed.error) };
+    }
+
+    if (!hasProAccess(await getCurrentUserIsPro())) {
+        return { success: false, error: AI_OPTIMIZE_PROMPT_PRO_ONLY_ERROR };
+    }
+    if (!isGeminiConfigured()) {
+        return { success: false, error: AI_UNAVAILABLE_ERROR };
+    }
+
+    const limit = await checkRateLimit("aiOptimizePrompt", user.userId);
+    if (!limit.success) {
+        return { success: false, error: AI_RATE_LIMIT_ERROR };
+    }
+
+    const content = truncateOptimizePromptContent(parsed.data.content);
+
+    try {
+        const response = await getGemini().models.generateContent({
+            model: AI_MODEL,
+            contents: buildOptimizePromptPrompt({ ...parsed.data, content }),
+            config: {
+                systemInstruction:
+                    "Refine and improve the given AI prompt: tighten wording, add missing structure or clarity, and fix ambiguity, while preserving its original intent and any placeholders/variables. If the prompt is already well-written, return it close to unchanged. Respond with the optimized prompt only, no explanations, no surrounding quotes.",
+                maxOutputTokens: OPTIMIZE_PROMPT_MAX_OUTPUT_TOKENS,
+                responseMimeType: "application/json",
+                responseJsonSchema: optimizedPromptSuggestionSchema.toJSONSchema(),
+            },
+        });
+
+        if (!response.text) {
+            return { success: false, error: GENERIC_ERROR };
+        }
+
+        const prompt = parseOptimizedPrompt(response.text);
+        if (!prompt) {
+            return { success: false, error: GENERIC_ERROR };
+        }
+
+        return { success: true, data: { prompt } };
+    } catch (error) {
+        if (error instanceof ApiError && error.status === 429) {
+            return { success: false, error: AI_RATE_LIMIT_ERROR };
+        }
+        console.error("AI prompt optimization failed:", error);
         return { success: false, error: GENERIC_ERROR };
     }
 }

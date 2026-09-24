@@ -25,6 +25,8 @@ interface ItemContentFieldProps {
     title?: string | null;
     /** Shows the code editor's Pro-gated "Explain" button — item drawer read view only. */
     showExplain?: boolean;
+    /** Shows the markdown editor's Pro-gated "Optimize" button — prompt items in create/edit forms only. */
+    showOptimize?: boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ export function ItemContentField({
     rows = 8,
     title,
     showExplain = false,
+    showOptimize = false,
 }: ItemContentFieldProps) {
     if (isCodeItemType(typeName)) {
         return (
@@ -66,6 +69,8 @@ export function ItemContentField({
                 value={value}
                 readOnly={readOnly}
                 onValueChange={onChange}
+                title={title}
+                showOptimize={showOptimize && typeName === "prompt"}
             />
         );
     }

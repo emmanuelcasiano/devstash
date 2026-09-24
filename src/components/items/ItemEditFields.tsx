@@ -113,6 +113,8 @@ export function ItemEditFields({
                         codeMaxHeight={DRAWER_CODE_MAX_HEIGHT}
                         onChange={onContentChange}
                         textareaId="item-content"
+                        title={form.title}
+                        showOptimize
                     />
                 </Field>
             )}

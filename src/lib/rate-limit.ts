@@ -49,6 +49,8 @@ export const RATE_LIMITS = {
   aiDescribe: { limit: 20, window: "1 h", prefix: "rl:ai-describe" },
   /** AI code explanation, keyed on `session.user.id`. */
   aiExplain: { limit: 20, window: "1 h", prefix: "rl:ai-explain" },
+  /** AI prompt optimization, keyed on `session.user.id`. */
+  aiOptimizePrompt: { limit: 20, window: "1 h", prefix: "rl:ai-optimize-prompt" },
 } as const satisfies Record<string, LimitConfig>;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

@@ -347,6 +347,8 @@ export function NewItemDialog({
                                         content: value,
                                     }))
                                 }
+                                title={form.title}
+                                showOptimize
                             />
                         </Field>
                     )}
