@@ -17,6 +17,14 @@ import {
     tagSuggestionSchema,
     truncateAutoTagContent,
 } from "@/lib/ai/auto-tags";
+import {
+    DESCRIBE_MAX_OUTPUT_TOKENS,
+    buildDescribePrompt,
+    descriptionSuggestionSchema,
+    generateDescriptionInputSchema,
+    parseDescriptionSuggestion,
+    truncateDescribeContent,
+} from "@/lib/ai/describe";
 import { hasProAccess } from "@/lib/billing/plans";
 import { getCurrentUserIsPro } from "@/lib/db/current-user";
 import { getGemini, isGeminiConfigured } from "@/lib/gemini";
@@ -24,6 +32,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const AI_UNAVAILABLE_ERROR = "AI features aren't available right now.";
 const AI_PRO_ONLY_ERROR = "AI tag suggestions are a Pro feature. Upgrade to use them.";
+const AI_DESCRIBE_PRO_ONLY_ERROR =
+    "AI description generation is a Pro feature. Upgrade to use it.";
 const AI_RATE_LIMIT_ERROR = "Too many AI requests. Please wait a bit and try again.";
 
 /**
@@ -95,6 +105,74 @@ export async function generateAutoTags(
             return { success: false, error: AI_RATE_LIMIT_ERROR };
         }
         console.error("AI auto-tag generation failed:", error);
+        return { success: false, error: GENERIC_ERROR };
+    }
+}
+
+/**
+ * Generates a concise 1-2 sentence description/summary for the "Generate
+ * description" button beside the Description field in the create item dialog
+ * and the item drawer's edit mode.
+ *
+ * Like `generateAutoTags`, this runs against whatever the client currently
+ * has staged in its form — title, content, url, file name, language — not a
+ * stored item, so it works before the item is ever saved and for every item
+ * type (file/image items have no content/url, so they fall back to title +
+ * file name).
+ */
+export async function generateDescription(
+    input: unknown,
+): Promise<ActionResult<{ description: string }>> {
+    const user = await requireUserId("generate an AI description");
+    if ("error" in user) return { success: false, error: user.error };
+
+    const parsed = generateDescriptionInputSchema.safeParse(input);
+    if (!parsed.success) {
+        return { success: false, error: zodMessage(parsed.error) };
+    }
+
+    if (!hasProAccess(await getCurrentUserIsPro())) {
+        return { success: false, error: AI_DESCRIBE_PRO_ONLY_ERROR };
+    }
+    if (!isGeminiConfigured()) {
+        return { success: false, error: AI_UNAVAILABLE_ERROR };
+    }
+
+    const limit = await checkRateLimit("aiDescribe", user.userId);
+    if (!limit.success) {
+        return { success: false, error: AI_RATE_LIMIT_ERROR };
+    }
+
+    const content = truncateDescribeContent(parsed.data.content);
+
+    try {
+        const response = await getGemini().models.generateContent({
+            model: AI_MODEL,
+            contents: buildDescribePrompt({ ...parsed.data, content }),
+            config: {
+                systemInstruction:
+                    "Write a concise 1-2 sentence description summarizing the given developer content (a code snippet, prompt, command, note, link, or file). Respond with the description only, no explanations, no surrounding quotes.",
+                maxOutputTokens: DESCRIBE_MAX_OUTPUT_TOKENS,
+                responseMimeType: "application/json",
+                responseJsonSchema: descriptionSuggestionSchema.toJSONSchema(),
+            },
+        });
+
+        if (!response.text) {
+            return { success: false, error: GENERIC_ERROR };
+        }
+
+        const description = parseDescriptionSuggestion(response.text);
+        if (!description) {
+            return { success: false, error: GENERIC_ERROR };
+        }
+
+        return { success: true, data: { description } };
+    } catch (error) {
+        if (error instanceof ApiError && error.status === 429) {
+            return { success: false, error: AI_RATE_LIMIT_ERROR };
+        }
+        console.error("AI description generation failed:", error);
         return { success: false, error: GENERIC_ERROR };
     }
 }

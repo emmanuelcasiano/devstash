@@ -1,18 +1,30 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: AI Description Generator
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Add an icon button next to the item Description field (both `NewItemDialog.tsx` and the drawer's `ItemEditFields.tsx`) that generates a concise 1-2 sentence summary and fills the Description field with it.
+- Works for every item type (snippet, prompt, command, note, link, file, image) using whatever fields are already populated in the in-memory form at click time — title, content, url, language, and file name for file/image types. No requirement to save the item first; this mirrors the existing "Suggest Tags" flow, which also reads live form state.
+- Clicking the button replaces the current Description field value with the AI-generated summary (this is a generate/overwrite action, not an append) — confirm this behavior is acceptable before/while building, since it will discard anything already typed there.
+- Pro-only feature, gated the same way as AI auto-tagging (hidden client-side for Free users via `usePlan().hasPro`, enforced server-side regardless of the UI).
+- Follows the established AI feature pattern from AI Auto-Tagging: a pure/testable prompt-building + response-parsing module (mirrors `src/lib/ai/auto-tags.ts`), a `"use server"` action in `src/actions/ai.ts` (`requireUserId` → Zod validate → Pro gate via `hasProAccess(getCurrentUserIsPro())` → `isGeminiConfigured()` check → rate limit → try/catch → `ActionResult<T>`), and a new rate limiter entry in `src/lib/rate-limit.ts` (separate from `aiAutoTag`).
+- Disable/guard the button when there's no usable source text (e.g. blank title and no content/url) similar to how `TagSuggestions` requires a title.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Reuses the same Gemini client (`src/lib/gemini.ts`, `getGemini()` / `isGeminiConfigured()`) and model conventions (`gemini-3.5-flash-lite`) established in the AI Auto-Tagging feature — no new AI provider or client needed.
+- Source text composition: title is always available; content for snippet/prompt/command/note; url for link; for file/image there's no content/url, so fall back to title + file name (`upload.fileName` in the create dialog's local `upload` state, `item.fileName` in the drawer edit — the drawer's `ItemFormValues` doesn't currently carry file name, so wiring may need to pass it down from `ItemDrawer.tsx` separately from the `ItemFormValues` object). Do NOT feed the existing Description value back in as input, since the whole point is generating/replacing it.
+- `Field` (`src/components/ui/field.tsx`) currently has no slot for a trailing action next to the label — either add an optional action/children prop there, or place the icon button beside/inside the Description `Textarea` without changing `Field`'s shared API. Prefer the smaller, non-breaking option.
+- Response should be constrained server-side (e.g. via `responseJsonSchema`/`maxOutputTokens` like `tagSuggestionSchema` does for tags) to reliably get a short 1-2 sentence result rather than a long one — needs its own schema/prompt, not a reuse of `tagSuggestionSchema`.
+- Consider a sensible content-length cap before sending to Gemini, mirroring `AUTO_TAG_CONTENT_LIMIT` / `truncateAutoTagContent` in `src/lib/ai/auto-tags.ts`.
+- No `context/features/` spec file exists for this — it's being tracked as an inline feature description only, same as several recent features (Collection Create, Item Collections, Collections Pages, etc.).
+
+## History
+
+<!-- Keep this updated. Earliest to latest -->
 
 ## History
 

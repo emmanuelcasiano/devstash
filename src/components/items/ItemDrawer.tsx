@@ -278,6 +278,13 @@ export function ItemDrawer({
                                                 language: value,
                                             }))
                                         }
+                                        onDescriptionChange={(value) =>
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                description: value,
+                                            }))
+                                        }
+                                        fileName={item.fileName ?? ""}
                                         onAddTag={(tag) =>
                                             setForm((prev) => ({
                                                 ...prev,

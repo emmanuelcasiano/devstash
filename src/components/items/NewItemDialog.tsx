@@ -20,6 +20,7 @@ import { createItem } from "@/actions/items";
 import { usePlan } from "@/components/billing/plan-provider";
 import { UpgradeNotice } from "@/components/billing/UpgradeNotice";
 import { CollectionPicker } from "@/components/items/CollectionPicker";
+import { DescribeButton } from "@/components/items/DescribeButton";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import { LanguageSelect } from "@/components/items/LanguageSelect";
@@ -27,6 +28,7 @@ import { TagSuggestions } from "@/components/items/TagSuggestions";
 import {
     EMPTY_ITEM_FORM,
     autoTagSourceText,
+    buildDescribeInput,
     type ItemFormValues,
 } from "@/components/items/item-form";
 import { Badge } from "@/components/ui/badge";
@@ -271,7 +273,25 @@ export function NewItemDialog({
                         />
                     </Field>
 
-                    <Field label="Description" htmlFor="new-item-description">
+                    <Field
+                        label="Description"
+                        htmlFor="new-item-description"
+                        action={
+                            <DescribeButton
+                                source={buildDescribeInput(
+                                    form,
+                                    upload?.fileName ?? "",
+                                )}
+                                onGenerate={(description) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        description,
+                                    }))
+                                }
+                                disabled={submitting}
+                            />
+                        }
+                    >
                         <Textarea
                             id="new-item-description"
                             value={form.description}

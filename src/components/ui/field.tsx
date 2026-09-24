@@ -8,15 +8,21 @@ import { Label } from "@/components/ui/label";
 export function Field({
     label,
     htmlFor,
+    action,
     children,
 }: {
     label: string;
     htmlFor: string;
+    /** Optional control (e.g. an AI-generate icon button) shown beside the label. */
+    action?: React.ReactNode;
     children: React.ReactNode;
 }) {
     return (
         <div className="flex flex-col gap-1.5">
-            <Label htmlFor={htmlFor}>{label}</Label>
+            <div className="flex items-center justify-between">
+                <Label htmlFor={htmlFor}>{label}</Label>
+                {action}
+            </div>
             {children}
         </div>
     );

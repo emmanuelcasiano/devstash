@@ -1,12 +1,14 @@
 "use client";
 
 import { CollectionPicker } from "@/components/items/CollectionPicker";
+import { DescribeButton } from "@/components/items/DescribeButton";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { TagSuggestions } from "@/components/items/TagSuggestions";
 import {
     DRAWER_CODE_MAX_HEIGHT,
     autoTagSourceText,
+    buildDescribeInput,
     type ItemFormValues,
 } from "@/components/items/item-form";
 import { Field } from "@/components/ui/field";
@@ -32,7 +34,9 @@ export function ItemEditFields({
     updateField,
     onContentChange,
     onLanguageChange,
+    onDescriptionChange,
     onAddTag,
+    fileName = "",
     collections,
     selectedCollectionIds,
     onCollectionsChange,
@@ -47,7 +51,10 @@ export function ItemEditFields({
     ) => void;
     onContentChange: (value: string) => void;
     onLanguageChange: (value: string) => void;
+    onDescriptionChange: (value: string) => void;
     onAddTag: (tag: string) => void;
+    /** The item's stored file name, for file/image types (no content/url to summarize otherwise). */
+    fileName?: string;
     collections: CollectionOption[];
     selectedCollectionIds: string[];
     onCollectionsChange: (ids: string[]) => void;
@@ -69,7 +76,16 @@ export function ItemEditFields({
                 />
             </Field>
 
-            <Field label="Description" htmlFor="item-description">
+            <Field
+                label="Description"
+                htmlFor="item-description"
+                action={
+                    <DescribeButton
+                        source={buildDescribeInput(form, fileName)}
+                        onGenerate={onDescriptionChange}
+                    />
+                }
+            >
                 <Textarea
                     id="item-description"
                     value={form.description}
