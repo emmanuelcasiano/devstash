@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isCodeItemType, toMonacoLanguage } from "@/lib/code-language";
+import {
+    LANGUAGE_OPTIONS,
+    isCodeItemType,
+    resolveLanguageOption,
+    toMonacoLanguage,
+} from "@/lib/code-language";
 
 describe("isCodeItemType", () => {
     it("flags snippet and command, case-insensitively", () => {
@@ -40,5 +45,32 @@ describe("toMonacoLanguage", () => {
     it("defaults an empty language to plaintext for everything else", () => {
         expect(toMonacoLanguage("", "snippet")).toBe("plaintext");
         expect(toMonacoLanguage(undefined)).toBe("plaintext");
+    });
+});
+
+describe("resolveLanguageOption", () => {
+    it("returns a canonical value as-is", () => {
+        expect(resolveLanguageOption("typescript")).toBe("typescript");
+        expect(resolveLanguageOption("Python")).toBe("python");
+    });
+
+    it("resolves a legacy free-text alias to its canonical option", () => {
+        expect(resolveLanguageOption("ts")).toBe("typescript");
+        expect(resolveLanguageOption("bash")).toBe("shell");
+        expect(resolveLanguageOption("c++")).toBe("cpp");
+        expect(resolveLanguageOption("  PY  ")).toBe("python");
+    });
+
+    it("returns null for empty or unrecognized values", () => {
+        expect(resolveLanguageOption("")).toBe(null);
+        expect(resolveLanguageOption(null)).toBe(null);
+        expect(resolveLanguageOption(undefined)).toBe(null);
+        expect(resolveLanguageOption("graphql")).toBe(null);
+    });
+
+    it("every option's value resolves to itself", () => {
+        for (const option of LANGUAGE_OPTIONS) {
+            expect(resolveLanguageOption(option.value)).toBe(option.value);
+        }
     });
 });

@@ -271,6 +271,12 @@ export function ItemDrawer({
                                                 content: value,
                                             }))
                                         }
+                                        onLanguageChange={(value) =>
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                language: value,
+                                            }))
+                                        }
                                         collections={collections}
                                         selectedCollectionIds={collectionIds}
                                         onCollectionsChange={setCollectionIds}

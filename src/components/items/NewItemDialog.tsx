@@ -22,6 +22,7 @@ import { UpgradeNotice } from "@/components/billing/UpgradeNotice";
 import { CollectionPicker } from "@/components/items/CollectionPicker";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { ItemContentField } from "@/components/items/ItemContentField";
+import { LanguageSelect } from "@/components/items/LanguageSelect";
 import {
     EMPTY_ITEM_FORM,
     type ItemFormValues,
@@ -294,6 +295,21 @@ export function NewItemDialog({
                         </Field>
                     )}
 
+                    {showLanguageField && (
+                        <Field label="Language" htmlFor="new-item-language">
+                            <LanguageSelect
+                                id="new-item-language"
+                                value={form.language}
+                                onChange={(value) =>
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        language: value,
+                                    }))
+                                }
+                            />
+                        </Field>
+                    )}
+
                     {showContentField && (
                         <Field label="Content" htmlFor="new-item-content">
                             <ItemContentField
@@ -308,17 +324,6 @@ export function NewItemDialog({
                                         content: value,
                                     }))
                                 }
-                            />
-                        </Field>
-                    )}
-
-                    {showLanguageField && (
-                        <Field label="Language" htmlFor="new-item-language">
-                            <Input
-                                id="new-item-language"
-                                value={form.language}
-                                onChange={updateField("language")}
-                                placeholder="typescript"
                             />
                         </Field>
                     )}

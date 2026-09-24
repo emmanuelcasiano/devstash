@@ -2,6 +2,7 @@
 
 import { CollectionPicker } from "@/components/items/CollectionPicker";
 import { ItemContentField } from "@/components/items/ItemContentField";
+import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { DRAWER_CODE_MAX_HEIGHT, type ItemFormValues } from "@/components/items/item-form";
 import { Field } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-message";
@@ -24,6 +25,7 @@ export function ItemEditFields({
     formError,
     updateField,
     onContentChange,
+    onLanguageChange,
     collections,
     selectedCollectionIds,
     onCollectionsChange,
@@ -37,6 +39,7 @@ export function ItemEditFields({
         event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => void;
     onContentChange: (value: string) => void;
+    onLanguageChange: (value: string) => void;
     collections: CollectionOption[];
     selectedCollectionIds: string[];
     onCollectionsChange: (ids: string[]) => void;
@@ -67,6 +70,16 @@ export function ItemEditFields({
                 />
             </Field>
 
+            {showLanguageField && (
+                <Field label="Language" htmlFor="item-language">
+                    <LanguageSelect
+                        id="item-language"
+                        value={form.language}
+                        onChange={onLanguageChange}
+                    />
+                </Field>
+            )}
+
             {showContentField && (
                 <Field label="Content" htmlFor="item-content">
                     <ItemContentField
@@ -76,17 +89,6 @@ export function ItemEditFields({
                         codeMaxHeight={DRAWER_CODE_MAX_HEIGHT}
                         onChange={onContentChange}
                         textareaId="item-content"
-                    />
-                </Field>
-            )}
-
-            {showLanguageField && (
-                <Field label="Language" htmlFor="item-language">
-                    <Input
-                        id="item-language"
-                        value={form.language}
-                        onChange={updateField("language")}
-                        placeholder="typescript"
                     />
                 </Field>
             )}
