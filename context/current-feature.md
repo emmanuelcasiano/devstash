@@ -1,45 +1,24 @@
-# Current Feature: AI Auto-Tagging
+# Current Feature
+
+<!-- Feature Name -->
 
 ## Status
 
-In Progress
+<!-- Not Started|In Progress|Completed -->
 
 ## Goals
 
-- Create a Gemini client utility with an `AI_MODEL` constant (`gemini-3.5-flash-lite`), if not already created by a prior AI feature — this is the first AI feature, so it establishes the Gemini foundation (client, server action pattern, rate limit config) for subsequent AI features
-- Use the `@google/genai` SDK (NOT the end-of-lifed `@google/generative-ai` package), kept simple
-- Create a `generateAutoTags` server action with `auth()`, Pro gating, Zod validation, and rate limiting, following the existing `ActionResult<T>` / `requireUserId` action pattern
-- Add an AI rate limit config (20 requests/hour per user) to the existing `src/lib/rate-limit.ts` utility, if not already added
-- Add a "Suggest Tags" button (Sparkles icon, ghost variant) near the tags input in both the create item dialog (`NewItemDialog`) and the item drawer's edit mode (`ItemEditFields`)
-- Display suggested tags as badges with per-tag accept (check) and reject (X) controls
-- Accepted tags get added to the item's tag list; tags are freeform (not limited to existing tags in the database)
-- Truncate item content to 2000 chars before the API call
-- Pro-only feature: hide the Suggest Tags button for free users (UI gating) AND enforce Pro gating server-side in the action
-- Error handling via toast (Pro gating, rate limit, AI service errors)
-- Follow existing codebase patterns
-- Unit tests for the server action (and any pure helper/validation logic)
+<!-- Goals & requirements -->
 
 ## Notes
 
-- `GEMINI_API_KEY` is already set in `.env`
-- `isPro` is available server-side via the session but is not currently passed to the create/edit UI components — server-side gating in the action is what actually enforces the restriction; UI-level button visibility needs `isPro` passed as a prop or fetched client-side (mirror how other Pro-gated UI in this app, e.g. `NewItemDialog`'s File/Image gating, already gets `isPro`/`usePlan()`)
-- Full spec at `context/features/ai-auto-tag-spec.md`; architectural context at `docs/ai-integration-plan-google.md`
-
-### Gemini SDK gotchas (from the spec — critical, read before implementing)
-
-- Use `responseJsonSchema` (not `responseSchema`) with a Zod v4 schema's native `.toJSONSchema()` export — no `zod-to-json-schema` package needed
-- `response.text` is always a raw JSON **string**, even under a `responseJsonSchema` constraint — always `JSON.parse` it and re-validate with the Zod schema (`safeParse`), handling empty/malformed output
-- The model may return `{"tags": [...]}` OR a bare `[...]` array depending on prompt phrasing — normalize a bare array into `{ tags: [...] }` before validating
-- Always lowercase tags after receiving them
-- `maxOutputTokens` (not `max_tokens`) should be small (e.g. 200) for a tag-suggestion response
-- Set `thinkingConfig: { thinkingBudget: 0 }` to skip Gemini's internal reasoning pass — verify empirically that Flash-Lite accepts this field; if unsupported it should be a harmless no-op, not an error
-- The SDK throws a single `ApiError` class with a `status` code — check `error.status === 429` for Google-side rate-limit responses
-- The SDK already retries transient failures (408/429/5xx) internally with exponential backoff — don't hand-roll retry logic in the action
+<!-- Any extra notes -->
 
 ## History
 
 <!-- Keep this updated. Earliest to latest -->
 
+- **2026-09-24** — AI Auto-Tagging (Completed): built per `context/features/ai-auto-tag-spec.md` — the first AI feature, establishing the Gemini foundation for future Pro AI features. **Client** — new `src/lib/gemini.ts` is a lazy `GoogleGenAI` client (`@google/genai`, NOT the end-of-lifed `@google/generative-ai`) cached on `globalThis` (mirrors `src/lib/stripe.ts`/`src/lib/r2.ts`), with `isGeminiConfigured()` so the feature degrades to a friendly error instead of throwing when `GEMINI_API_KEY` is unset. **Pure logic** — new `src/lib/ai/auto-tags.ts` (Prisma/auth/Gemini-free, unit tested) holds `AI_MODEL = "gemini-3.5-flash-lite"`, `AUTO_TAG_MAX_OUTPUT_TOKENS = 200`, `AUTO_TAG_CONTENT_LIMIT = 2000`, `generateAutoTagsInputSchema`, the Gemini `responseJsonSchema` (`tagSuggestionSchema`, passed via Zod v4's native `.toJSONSchema()`), `truncateAutoTagContent`, `buildAutoTagPrompt`, and `parseTagSuggestions` (parses Gemini's raw JSON-string response, normalizes a bare `[...]` array into `{tags:[...]}`, lowercases + de-dupes, returns `null` on malformed/empty output). **Action** — `src/actions/ai.ts` `generateAutoTags(input)` follows the established `requireUserId` → Zod validate → Pro gate (`hasProAccess(getCurrentUserIsPro())`) → `isGeminiConfigured()` check → rate limit → try/catch → `ActionResult<T>` shape; a Gemini `ApiError` with `status === 429` maps to a friendly rate-limit message. `thinkingConfig: { thinkingBudget: 0 }` was tried per the spec's suggestion but `gemini-3.5-flash-lite` rejects it with a hard 400 — confirmed empirically and omitted with a comment explaining why. `src/lib/rate-limit.ts` gained a 20/hour `aiAutoTag` limiter keyed on `session.user.id`. **UI** — new `src/components/items/TagSuggestions.tsx` (client): a ghost "Suggest Tags" (Sparkles icon) button, hidden entirely for Free users via `usePlan().hasPro` (UI-only — the action enforces Pro server-side), that calls the action and renders returned tags (filtered against tags already in the field) as outline `Badge`s with per-tag accept (check, folds into the tag field via `addTagToInput`) / reject (X) controls; errors surface via `toast.error`. Wired into both `NewItemDialog.tsx` and `ItemEditFields.tsx` (the drawer's edit mode), passing `autoTagSourceText(form)` (new helper in `src/components/items/item-form.ts` — joins content, then URL, then description, so file/image items with neither still give the model something) as the source text and the item's title. `addTagToInput` (new, `src/lib/validation/item.ts`) case-insensitively skips a duplicate before appending. **Tests** — new `src/lib/ai/auto-tags.test.ts` and additions to `src/lib/validation/item.test.ts`; `npm test` 14 files / 167 tests → 15 files / 187 tests. `TagSuggestions.tsx` and the action itself got no unit tests, consistent with the rest of the repo (Gemini/`auth()` calls, no mocking harness; React components out of scope per the Testing standard). No DB migration, no new env vars beyond the already-set `GEMINI_API_KEY`; the build route list is unchanged (server actions add no routes). New dependency: `@google/genai`. Browser verification of the Suggest Tags flow (Pro visibility, accept/reject, rate limiting, Free-user hiding) was not run in this session — left to the user. Lint, `npm test`, and `npm run build` pass. Merged to `main`, branch `feature/ai-auto-tagging` deleted.
 - **2026-08-17** — Initial Next.js Setup: project scaffolded with Create Next App, Tailwind CSS configured.
 - **2026-08-18** — Dashboard UI Phase 1: ShadCN UI initialized, `/dashboard` route added with main layout, dark mode by default, top bar (logo, search, New Collection, New Item), and sidebar/main placeholders.
 - **2026-08-19** — Dashboard UI Phase 2 (Completed): collapsible sidebar with Types and Collections (favorites + recent) sections, item type links to `/items/[type]`, sidebar header ("Navigation" label + collapse toggle) and pinned user avatar footer spanning full width, drawer-based sidebar on mobile via Sheet, and a fixed-viewport-height dashboard shell (`h-screen` with internal `main` scroll) so the sidebar always fills the full screen height. Fixed a pre-existing broken `--font-sans` mapping so the app now renders with the intended Geist font. Lint and `npm run build` pass.
