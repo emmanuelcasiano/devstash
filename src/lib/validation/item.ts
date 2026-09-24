@@ -197,3 +197,19 @@ export function parseTagsInput(raw: string): string[] {
     }
     return [...seen];
 }
+
+/**
+ * Appends one tag to the comma-separated tag input, skipping it (case
+ * -insensitively) if it's already present. Used to fold an accepted AI tag
+ * suggestion into the same field state `parseTagsInput` reads on submit.
+ */
+export function addTagToInput(raw: string, tag: string): string {
+    const trimmedTag = tag.trim();
+    if (!trimmedTag) return raw;
+
+    const tags = parseTagsInput(raw);
+    const alreadyPresent = tags.some(
+        (existing) => existing.toLowerCase() === trimmedTag.toLowerCase(),
+    );
+    return alreadyPresent ? tags.join(", ") : [...tags, trimmedTag].join(", ");
+}

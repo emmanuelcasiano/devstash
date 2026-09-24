@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    addTagToInput,
     contentFieldsForType,
     createItemSchema,
     isContentItemType,
@@ -321,6 +322,28 @@ describe("parseTagsInput", () => {
     it("returns an empty array for a blank string", () => {
         expect(parseTagsInput("   ")).toEqual([]);
         expect(parseTagsInput("")).toEqual([]);
+    });
+});
+
+describe("addTagToInput", () => {
+    it("appends a new tag to an existing comma-separated list", () => {
+        expect(addTagToInput("react, hooks", "patterns")).toBe(
+            "react, hooks, patterns",
+        );
+    });
+
+    it("appends to a blank input", () => {
+        expect(addTagToInput("", "react")).toBe("react");
+        expect(addTagToInput("   ", "react")).toBe("react");
+    });
+
+    it("skips a tag already present, case-insensitively", () => {
+        expect(addTagToInput("react, hooks", "React")).toBe("react, hooks");
+        expect(addTagToInput("react, hooks", "hooks")).toBe("react, hooks");
+    });
+
+    it("ignores a blank tag", () => {
+        expect(addTagToInput("react, hooks", "   ")).toBe("react, hooks");
     });
 });
 

@@ -28,3 +28,17 @@ export const EMPTY_ITEM_FORM: ItemFormValues = {
  * snippet shows in full.
  */
 export const DRAWER_CODE_MAX_HEIGHT = 1200;
+
+/**
+ * Combines the create/edit form's free-text fields into one string for the AI
+ * auto-tag suggestion prompt — content first (the primary signal for
+ * snippet/prompt/command/note), then URL (for links), then description as a
+ * fallback so file/image items (which have neither) still give the model
+ * something to work with.
+ */
+export function autoTagSourceText(form: ItemFormValues): string {
+    return [form.content, form.url, form.description]
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+        .join("\n\n");
+}

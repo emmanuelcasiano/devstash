@@ -3,7 +3,12 @@
 import { CollectionPicker } from "@/components/items/CollectionPicker";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import { LanguageSelect } from "@/components/items/LanguageSelect";
-import { DRAWER_CODE_MAX_HEIGHT, type ItemFormValues } from "@/components/items/item-form";
+import { TagSuggestions } from "@/components/items/TagSuggestions";
+import {
+    DRAWER_CODE_MAX_HEIGHT,
+    autoTagSourceText,
+    type ItemFormValues,
+} from "@/components/items/item-form";
 import { Field } from "@/components/ui/field";
 import { FormError } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
@@ -12,6 +17,7 @@ import type { CollectionOption } from "@/lib/db/collections";
 import {
     isContentItemType,
     isLanguageItemType,
+    parseTagsInput,
 } from "@/lib/validation/item";
 
 /**
@@ -26,6 +32,7 @@ export function ItemEditFields({
     updateField,
     onContentChange,
     onLanguageChange,
+    onAddTag,
     collections,
     selectedCollectionIds,
     onCollectionsChange,
@@ -40,6 +47,7 @@ export function ItemEditFields({
     ) => void;
     onContentChange: (value: string) => void;
     onLanguageChange: (value: string) => void;
+    onAddTag: (tag: string) => void;
     collections: CollectionOption[];
     selectedCollectionIds: string[];
     onCollectionsChange: (ids: string[]) => void;
@@ -115,6 +123,12 @@ export function ItemEditFields({
                 <p className="text-xs text-muted-foreground">
                     Separate tags with commas.
                 </p>
+                <TagSuggestions
+                    title={form.title}
+                    sourceText={autoTagSourceText(form)}
+                    existingTags={parseTagsInput(form.tags)}
+                    onAccept={onAddTag}
+                />
             </Field>
 
             <Field label="Collections" htmlFor="item-collections">

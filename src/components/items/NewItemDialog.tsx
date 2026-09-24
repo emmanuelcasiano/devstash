@@ -23,8 +23,10 @@ import { CollectionPicker } from "@/components/items/CollectionPicker";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import { LanguageSelect } from "@/components/items/LanguageSelect";
+import { TagSuggestions } from "@/components/items/TagSuggestions";
 import {
     EMPTY_ITEM_FORM,
+    autoTagSourceText,
     type ItemFormValues,
 } from "@/components/items/item-form";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +53,7 @@ import { getItemTypeColor, isProItemType } from "@/lib/constants/item-types";
 import type { CollectionOption } from "@/lib/db/collections";
 import { makeFieldUpdater } from "@/lib/forms";
 import {
+    addTagToInput,
     isContentItemType,
     isLanguageItemType,
     isFileItemType,
@@ -351,6 +354,18 @@ export function NewItemDialog({
                         <p className="text-xs text-muted-foreground">
                             Separate tags with commas.
                         </p>
+                        <TagSuggestions
+                            title={form.title}
+                            sourceText={autoTagSourceText(form)}
+                            existingTags={parseTagsInput(form.tags)}
+                            onAccept={(tag) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    tags: addTagToInput(prev.tags, tag),
+                                }))
+                            }
+                            disabled={submitting}
+                        />
                     </Field>
 
                     <Field label="Collections" htmlFor="new-item-collections">

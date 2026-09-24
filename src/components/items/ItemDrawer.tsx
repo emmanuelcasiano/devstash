@@ -29,6 +29,7 @@ import { toggleItemFavorite, toggleItemPin, updateItem } from "@/actions/items";
 import type { CollectionOption } from "@/lib/db/collections";
 import { makeFieldUpdater } from "@/lib/forms";
 import {
+    addTagToInput,
     isContentItemType,
     isLanguageItemType,
     parseTagsInput,
@@ -275,6 +276,12 @@ export function ItemDrawer({
                                             setForm((prev) => ({
                                                 ...prev,
                                                 language: value,
+                                            }))
+                                        }
+                                        onAddTag={(tag) =>
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                tags: addTagToInput(prev.tags, tag),
                                             }))
                                         }
                                         collections={collections}

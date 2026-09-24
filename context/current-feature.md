@@ -1,18 +1,40 @@
-# Current Feature
-
-<!-- Feature Name -->
+# Current Feature: AI Auto-Tagging
 
 ## Status
 
-<!-- Not Started|In Progress|Completed -->
+In Progress
 
 ## Goals
 
-<!-- Goals & requirements -->
+- Create a Gemini client utility with an `AI_MODEL` constant (`gemini-3.5-flash-lite`), if not already created by a prior AI feature — this is the first AI feature, so it establishes the Gemini foundation (client, server action pattern, rate limit config) for subsequent AI features
+- Use the `@google/genai` SDK (NOT the end-of-lifed `@google/generative-ai` package), kept simple
+- Create a `generateAutoTags` server action with `auth()`, Pro gating, Zod validation, and rate limiting, following the existing `ActionResult<T>` / `requireUserId` action pattern
+- Add an AI rate limit config (20 requests/hour per user) to the existing `src/lib/rate-limit.ts` utility, if not already added
+- Add a "Suggest Tags" button (Sparkles icon, ghost variant) near the tags input in both the create item dialog (`NewItemDialog`) and the item drawer's edit mode (`ItemEditFields`)
+- Display suggested tags as badges with per-tag accept (check) and reject (X) controls
+- Accepted tags get added to the item's tag list; tags are freeform (not limited to existing tags in the database)
+- Truncate item content to 2000 chars before the API call
+- Pro-only feature: hide the Suggest Tags button for free users (UI gating) AND enforce Pro gating server-side in the action
+- Error handling via toast (Pro gating, rate limit, AI service errors)
+- Follow existing codebase patterns
+- Unit tests for the server action (and any pure helper/validation logic)
 
 ## Notes
 
-<!-- Any extra notes -->
+- `GEMINI_API_KEY` is already set in `.env`
+- `isPro` is available server-side via the session but is not currently passed to the create/edit UI components — server-side gating in the action is what actually enforces the restriction; UI-level button visibility needs `isPro` passed as a prop or fetched client-side (mirror how other Pro-gated UI in this app, e.g. `NewItemDialog`'s File/Image gating, already gets `isPro`/`usePlan()`)
+- Full spec at `context/features/ai-auto-tag-spec.md`; architectural context at `docs/ai-integration-plan-google.md`
+
+### Gemini SDK gotchas (from the spec — critical, read before implementing)
+
+- Use `responseJsonSchema` (not `responseSchema`) with a Zod v4 schema's native `.toJSONSchema()` export — no `zod-to-json-schema` package needed
+- `response.text` is always a raw JSON **string**, even under a `responseJsonSchema` constraint — always `JSON.parse` it and re-validate with the Zod schema (`safeParse`), handling empty/malformed output
+- The model may return `{"tags": [...]}` OR a bare `[...]` array depending on prompt phrasing — normalize a bare array into `{ tags: [...] }` before validating
+- Always lowercase tags after receiving them
+- `maxOutputTokens` (not `max_tokens`) should be small (e.g. 200) for a tag-suggestion response
+- Set `thinkingConfig: { thinkingBudget: 0 }` to skip Gemini's internal reasoning pass — verify empirically that Flash-Lite accepts this field; if unsupported it should be a harmless no-op, not an error
+- The SDK throws a single `ApiError` class with a `status` code — check `error.status === 429` for Google-side rate-limit responses
+- The SDK already retries transient failures (408/429/5xx) internally with exponential backoff — don't hand-roll retry logic in the action
 
 ## History
 

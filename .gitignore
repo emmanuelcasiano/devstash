@@ -58,3 +58,6 @@ next-env.d.ts
 # mcp tooling
 .mcp.json
 .playwright-mcp/
+
+# personal learning notes
+/docs/ai-auto-tag-learning-notes.md

@@ -43,6 +43,8 @@ export const RATE_LIMITS = {
   changePassword: { limit: 5, window: "15 m", prefix: "rl:change-password" },
   /** Checkout / billing-portal session creation, keyed on `session.user.id`. */
   billing: { limit: 10, window: "1 h", prefix: "rl:billing" },
+  /** AI auto-tag suggestions, keyed on `session.user.id`. */
+  aiAutoTag: { limit: 20, window: "1 h", prefix: "rl:ai-auto-tag" },
 } as const satisfies Record<string, LimitConfig>;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;
